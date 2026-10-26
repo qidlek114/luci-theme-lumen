@@ -18,6 +18,7 @@
 - 对表格、长文本、操作按钮和状态卡片进行响应式处理。
 - 字体与 SVG 图标随包提供，不依赖外部字体或图标服务。
 - 提供英文与简体中文；中文采用可编辑的标准 LuCI PO 翻译文件。
+- 手动检查 GitHub 更新，选择目标版本并查看中间全部正式版说明；按当前包格式提供下载，不自动安装。
 
 ![Lumen 浅色桌面界面，使用演示数据](docs/screenshots/desktop-light.png)
 
@@ -27,20 +28,22 @@
 
 ## 兼容范围
 
-v1.0.0 面向 **OpenWrt 25.12 系列的 ucode LuCI**。依赖 `luci-base`、`luci-mod-status` 和作为卸载回退的 `luci-theme-bootstrap`，不依赖代理、Docker、广告过滤或任何特定硬件。它保留原生 LuCI 页面，自带页面全部位于 `admin/lumen/` 下。
+v1.0.1 面向 **ucode LuCI**，目标构建环境是 OpenWrt 25.12.6 SDK（APK，`noarch`）和 24.10.8 SDK（IPK，`all`）。架构无关不代表兼容所有固件；软件包格式与 LuCI 运行环境仍须匹配。依赖 `luci-base`、`luci-mod-status` 和作为卸载回退的 `luci-theme-bootstrap`，不依赖代理、Docker、广告过滤或任何特定硬件。它保留原生 LuCI 页面，自带页面全部位于 `admin/lumen/` 下。
 
-发布时完成的是源码审查、静态检查和演示界面检查。主题的前身曾在实际设备运行，并收到 iPhone Safari 滚动修复的验证；**本次独立软件包尚未完成全新 SDK 构建、全新安装、重启或跨固件版本测试**，不应将前身运行情况等同于此版本软件包验收。旧 Lua LuCI、厂商定制页面及未来 LuCI 版本不在已验证范围内。
+两个 SDK 构建均已成功；两个格式的 235 个运行时文件完成源码对应检查，168 条中文翻译完成核对。OpenWrt 24.10.8 的 IPK 和 25.12.6 的 APK 隔离验证均已覆盖签名校验安装、从旧版本测试包升级并保留 UCI 配置，以及卸载检查；IPK 另已验证启用、外观／主题选择保留和当前／非当前主题的卸载回退。APK 原生验签通过，无信任密钥及内容篡改的负面对照均被拒绝。源码与更新行为测试、Chromium 320／390／1280 px 明暗演示布局检查也已通过。
+
+OpenWrt 25.12.6 真机仅部署了更新页相关的 5 个界面文件，已在真实浏览器确认中文界面和手动 GitHub 查询，代理保持原状态。**真机没有执行完整发布包安装，隔离环境和真机均没有执行完整启动或重启验收。** 这些结果不代表全部固件和浏览器兼容，也不承诺二进制可复现构建。详细范围、构建来源与限制见[验证记录](docs/VALIDATION.md)。旧 Lua LuCI 不适用；厂商定制页面及未来 LuCI 版本不在已验证范围内。
 
 字体文件约 6.53 MB（未压缩），另有脚本、样式和模板，请为包及升级留出足够空间。
 
 ## 从源码构建
 
-使用与目标设备固件匹配的 OpenWrt 25.12 SDK 或源码树，并按其官方文档准备编译环境。以下操作在 **SDK／源码树根目录** 执行：
+使用与目标设备固件匹配的 OpenWrt SDK 或源码树，并按其官方文档准备编译环境。v1.0.1 的目标 SDK 为 25.12.6 和 24.10.8。以下操作在 **SDK／源码树根目录** 执行：
 
 ```sh
-./scripts/feeds update luci
-./scripts/feeds install luci-base luci-mod-status luci-theme-bootstrap
-git clone --branch v1.0.0 --depth 1 https://github.com/qidlek114/luci-theme-lumen.git package/luci-theme-lumen
+./scripts/feeds update -a
+./scripts/feeds install -a
+git clone --branch v1.0.1 --depth 1 https://github.com/qidlek114/luci-theme-lumen.git package/luci-theme-lumen
 make menuconfig
 make package/luci-theme-lumen/compile V=s
 ```
@@ -50,12 +53,12 @@ make package/luci-theme-lumen/compile V=s
 - `luci-theme-lumen`：主题本体。
 - `luci-i18n-lumen-zh-cn`：中文翻译，安装到 `lumen.zh-cn.lmo`。
 
-生成的包位于 SDK 的 `bin/packages/` 子目录。主题是架构无关资源，但仍需使用匹配目标系统的软件包格式和 LuCI API。**源码 ZIP／tar.gz 不是可直接安装的 APK。** 初次源码发布不附带未经 SDK 验证的二进制包。
+生成的包位于 SDK 的 `bin/packages/` 子目录。主题是架构无关资源，但仍需使用匹配目标系统的软件包格式和 LuCI API。**源码 ZIP／tar.gz 不能当作 APK 或 IPK 安装。** 可安装包是否已经发布及其验收范围，以对应 Release 的资产和验证说明为准；v1.0.0 仍是仅源码发布。
 
 ## 安装与启用
 
 1. 保留可用的原主题，并记录当前主题。先在备用设备或可恢复的测试环境验证。
-2. 通过受信任、已配置签名密钥的软件源，或固件正常接受的已签名软件包，安装主题及可选的中文翻译包。不要关闭软件包签名校验。
+2. 从对应 [Release](https://github.com/qidlek114/luci-theme-lumen/releases) 获取匹配的主题和可选中文包，先按[安装与签名验证说明](docs/INSTALL.md)核对公钥和软件包。APK 使用项目密钥原生签名；IPK 先验证 usign 签名的摘要清单，再核对包内容。SHA-256 单独不能证明发布者身份。不要关闭 HTTPS 证书或软件包签名校验。
 3. 安装沿用 LuCI 标准生命周期，可能清理 LuCI 缓存并重载 `rpcd` 以加载权限；它不重启网络、防火墙或代理服务。重新登录即可刷新会话和菜单。
 4. 在 **系统 → 系统 → 语言和界面** 中手动选择 **Lumen**。安装脚本只登记主题，不自动切换当前主题。
 5. 在 **Lumen → 外观** 调整配色和界面名称；在 **Lumen → 仪表盘／实时图表** 查看数据。
@@ -69,6 +72,25 @@ config theme 'main'
 ```
 
 `style` 可选 `default`、`claude`；`mode` 可选 `auto`、`light`、`dark`。可选的 `hostname` 和 `model` 只改变界面显示，留空时读取实际设备信息。此文件作为配置文件保留，升级时由软件包管理器处理本地修改。
+
+## 手动检查更新
+
+打开 **Lumen → 检查更新**，点击“检查更新”。页面从已安装包的本地版本信息读取版本和 APK／IPK 格式，仅在点击后由当前浏览器访问本项目的公开 GitHub API；不发送登录凭据或令牌，不自动轮询，也不新增后端安装权限。
+
+可选择高于当前版本的已发布正式版。选定目标后，页面按版本顺序分段展示**当前版本之后、直到目标版本为止**的全部正式版说明。例如从 1.0.0 选择 1.1.0，会同时包含已发布的 1.0.1、1.0.2 和 1.1.0，而非只展示目标版。草稿和预发布版不参与比较；没有说明的版本会明确提示。发布说明按纯文本呈现，不执行其中的 HTML。
+
+检查最多读取 10 页、每页 100 条发布记录，GitHub 请求总计最多 30 秒。超时、限流、分页截断、异常版本标签或数据不完整时，会提示无法确定状态并停止提供版本选择／下载，不会误报“已经最新”。
+
+下载区域仅列出本仓库目标 Release 中与当前格式匹配的主题、中文包，以及提供的公钥和校验文件。**格式匹配不等于固件兼容，下载也不会自动安装。** 核对目标版要求并完成签名验证后，再到 LuCI“软件包”页手动确认安装。包管理页入口根据当前可访问菜单发现，不依赖固定的 APK／IPK 路径。
+
+<details>
+<summary>更新页演示，使用合成版本记录</summary>
+
+![更新页演示，使用合成版本记录，不代表实际发布历史](docs/screenshots/updates-demo.png)
+
+图中的 1.0.0、1.0.1、1.0.2、1.1.0 记录用于演示跨版本说明，不代表这些版本已发布。
+
+</details>
 
 ## 回退与卸载
 
