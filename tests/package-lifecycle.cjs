@@ -16,12 +16,12 @@ const mock=`uci() {
   esac
 }
 `;
-function run(script,name,state,instroot=''){
+function run(script,name,state,instroot='',args=[]){
  const dir=path.join(temp,name);fs.mkdirSync(dir,{recursive:true});
  for(const [k,v] of Object.entries(state))fs.writeFileSync(path.join(dir,k),v);
  const file=path.join(temp,name+'.sh');fs.writeFileSync(file,mock+script);
  let result=spawnSync(bash,['-n',file],{encoding:'utf8'});assert.equal(result.status,0,result.stderr);
- result=spawnSync(bash,[file],{encoding:'utf8',env:{...process.env,MOCK_STATE:dir.replace(/\\/g,'/'),IPKG_INSTROOT:instroot}});assert.equal(result.status,0,result.stderr);
+ result=spawnSync(bash,[file,...args],{encoding:'utf8',env:{...process.env,MOCK_STATE:dir.replace(/\\/g,'/'),IPKG_INSTROOT:instroot}});assert.equal(result.status,0,result.stderr);
  return Object.fromEntries(fs.readdirSync(dir).map(f=>[f,fs.readFileSync(path.join(dir,f),'utf8')]));
 }
 const original={'luci.main.mediaurlbase':'/luci-static/existing','unrelated-network':'preserve'};
@@ -30,4 +30,8 @@ s=run(registration,'idempotent',{'luci.themes.Lumen':'/luci-static/lumen',...ori
 s=run(postrm,'remove-active',{'luci.themes.Lumen':'/luci-static/lumen','luci.main.mediaurlbase':'/luci-static/lumen','unrelated-network':'preserve'});assert.equal(s['luci.main.mediaurlbase'],'/luci-static/bootstrap');assert(!s['luci.themes.Lumen']);assert.equal(s['unrelated-network'],'preserve');
 s=run(postrm,'remove-inactive',{'luci.themes.Lumen':'/luci-static/lumen',...original});assert.equal(s['luci.main.mediaurlbase'],original['luci.main.mediaurlbase']);assert(!s['luci.themes.Lumen']);
 s=run(postrm,'offline',{'luci.themes.Lumen':'/luci-static/lumen',...original},'/image-root');assert.equal(s['luci.themes.Lumen'],'/luci-static/lumen');assert(!s.commits);
-console.log('Package lifecycle mock checks passed: registration, idempotence, active fallback, inactive removal, offline guard.');
+const active={'luci.themes.Lumen':'/luci-static/lumen','luci.main.mediaurlbase':'/luci-static/lumen','unrelated-network':'preserve'};
+s=run(postrm,'opkg-upgrade',active,'',['upgrade','1.0.2-r1']);assert.deepEqual(s,active);
+s=run(postrm,'opkg-remove',active,'',['remove']);assert.equal(s['luci.main.mediaurlbase'],'/luci-static/bootstrap');assert(!s['luci.themes.Lumen']);
+s=run(postrm,'apk-deinstall',active,'',['1.0.1-r1']);assert.equal(s['luci.main.mediaurlbase'],'/luci-static/bootstrap');assert(!s['luci.themes.Lumen']);
+console.log('Package lifecycle mock checks passed: registration, idempotence, active fallback, inactive removal, offline guard, opkg upgrade/remove, APK deinstall.');

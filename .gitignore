@@ -10,3 +10,8 @@ Thumbs.db
 *.bak
 .env
 .env.*
+*.pem
+*.key
+*.sec
+key-build*
+!*.pub
