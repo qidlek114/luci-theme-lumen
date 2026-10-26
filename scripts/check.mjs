@@ -35,4 +35,6 @@ const result=spawnSync(process.execPath,[path.join(root,'tests/portability.cjs')
 process.stdout.write(result.stdout||'');assert.equal(result.status,0,result.stderr);
 const lifecycle=spawnSync(process.execPath,[path.join(root,'tests/package-lifecycle.cjs')],{encoding:'utf8'});
 process.stdout.write(lifecycle.stdout||'');assert.equal(lifecycle.status,0,lifecycle.stderr);
+const updates=spawnSync(process.execPath,[path.join(root,'tests/updates.cjs')],{encoding:'utf8'});
+process.stdout.write(updates.stdout||'');assert.equal(updates.status,0,updates.stderr);
 console.log(JSON.stringify({ok:true,js,json,fonts,localCssAssets:assets,runtimeFiles:runtime.length}));

@@ -3,7 +3,7 @@
 # Copyright 2026 Lumen contributors
 msgid ""
 msgstr ""
-"Project-Id-Version: luci-theme-lumen 1.0.0\n"
+"Project-Id-Version: luci-theme-lumen 1.0.1\n"
 "Language: zh_Hans\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -510,3 +510,183 @@ msgstr "外网未连接"
 #: root/usr/share/ucode/luci/template/themes/lumen/header.ut
 msgid "You must enable JavaScript in your browser or LuCI will not work properly."
 msgstr "必须在浏览器中启用 JavaScript，否则 LuCI 无法正常工作。"
+
+#: htdocs/luci-static/resources/view/lumen/updates.js
+msgid "Updates"
+msgstr "检查更新"
+
+#: htdocs/luci-static/resources/view/lumen/updates.js
+msgid "Lumen updates"
+msgstr "Lumen 主题更新"
+
+#: htdocs/luci-static/resources/view/lumen/updates.js
+msgid "The check timed out. Try again later."
+msgstr "检查超时，请稍后重试。"
+
+#: htdocs/luci-static/resources/view/lumen/updates.js
+msgid "GitHub refused or rate-limited the request. Try again later."
+msgstr "GitHub 拒绝了请求或限制了请求频率，请稍后重试。"
+
+#: htdocs/luci-static/resources/view/lumen/updates.js
+msgid "The release history exceeds the 10-page limit. The results are incomplete."
+msgstr "发布记录超过了 10 页上限，结果尚不完整。"
+
+#: htdocs/luci-static/resources/view/lumen/updates.js
+msgid "Some stable release tags could not be compared as semantic versions."
+msgstr "部分正式版标签无法按版本号比较。"
+
+#: htdocs/luci-static/resources/view/lumen/updates.js
+msgid "Different releases have the same version number. The results need manual review."
+msgstr "不同发布记录使用了相同版本号，需要人工核对。"
+
+#: htdocs/luci-static/resources/view/lumen/updates.js
+msgid "The release history changed during this check. Please check again."
+msgstr "检查过程中发布记录发生变化，请重新检查。"
+
+#: htdocs/luci-static/resources/view/lumen/updates.js
+msgid "GitHub returned unexpected release data."
+msgstr "GitHub 返回的发布数据格式异常。"
+
+#: htdocs/luci-static/resources/view/lumen/updates.js
+msgid "GitHub returned an error. Try again later."
+msgstr "GitHub 返回错误，请稍后重试。"
+
+#: htdocs/luci-static/resources/view/lumen/updates.js
+msgid "Could not reach GitHub. Check this browser’s connection and try again."
+msgstr "无法连接 GitHub，请检查此浏览器的网络连接后重试。"
+
+#: htdocs/luci-static/resources/view/lumen/updates.js
+msgid "Theme package"
+msgstr "主题安装包"
+
+#: htdocs/luci-static/resources/view/lumen/updates.js
+msgid "Simplified Chinese package"
+msgstr "简体中文包"
+
+#: htdocs/luci-static/resources/view/lumen/updates.js
+msgid "Verification key"
+msgstr "验签公钥"
+
+#: htdocs/luci-static/resources/view/lumen/updates.js
+msgid "Checksums / signature"
+msgstr "校验清单／签名"
+
+#: htdocs/luci-static/resources/view/lumen/updates.js
+msgid "Check GitHub for updates"
+msgstr "检查更新"
+
+#: htdocs/luci-static/resources/view/lumen/updates.js
+msgid "Updates are checked only when you press the button."
+msgstr "仅在点击按钮后检查更新，不会自动升级。"
+
+#: htdocs/luci-static/resources/view/lumen/updates.js
+msgid "Installed version or package format is unavailable. Update status cannot be determined."
+msgstr "无法读取已安装版本或包格式，目前不能确定更新状态。"
+
+#: htdocs/luci-static/resources/view/lumen/updates.js
+msgid "This page checks and downloads releases only. It never installs updates or changes router settings."
+msgstr "本页用于检查更新和下载安装包，不会执行安装或修改路由器设置。"
+
+#: htdocs/luci-static/resources/view/lumen/updates.js
+msgid "The check connects this browser to the public GitHub API without a token or login credentials."
+msgstr "检查时由此浏览器连接 GitHub 公开接口，不发送密钥或登录凭据。"
+
+#: htdocs/luci-static/resources/view/lumen/updates.js
+msgid "Open GitHub releases"
+msgstr "打开 GitHub 发布页面"
+
+#: htdocs/luci-static/resources/view/lumen/updates.js
+msgid "Open LuCI package manager"
+msgstr "打开 LuCI 软件包管理"
+
+#: htdocs/luci-static/resources/view/lumen/updates.js
+msgid "Installed version: %s · Package format: %s"
+msgstr "当前版本：%s · 安装包格式：%s"
+
+#: htdocs/luci-static/resources/view/lumen/updates.js
+msgid "Installed version: unknown"
+msgstr "当前版本：未知"
+
+#: htdocs/luci-static/resources/view/lumen/updates.js
+msgid "Checking releases… Please wait."
+msgstr "正在检查发布记录，请稍候…"
+
+#: htdocs/luci-static/resources/view/lumen/updates.js
+msgid "The check is incomplete. Update status and the full release-note range cannot be determined."
+msgstr "检查未完成，不能确定更新状态，也无法保证已获取完整的跨版本更新记录。"
+
+#: htdocs/luci-static/resources/view/lumen/updates.js
+msgid "No version selection or downloads are shown for incomplete results. Open GitHub releases or try again."
+msgstr "记录不完整时暂不提供版本选择与下载，请打开 GitHub 发布页面查看或重试。"
+
+#: htdocs/luci-static/resources/view/lumen/updates.js
+msgid "No stable releases were returned. Update status cannot be determined."
+msgstr "未获得正式发布版本，目前不能确定更新状态。"
+
+#: htdocs/luci-static/resources/view/lumen/updates.js
+msgid "The installed version is newer than the published stable releases."
+msgstr "当前安装的版本高于 GitHub 已发布的正式版本。"
+
+#: htdocs/luci-static/resources/view/lumen/updates.js
+msgid "No newer stable release was found."
+msgstr "没有发现更新的正式版本。"
+
+#: htdocs/luci-static/resources/view/lumen/updates.js
+msgid "New stable releases are available. Choose a target version to review every intervening release."
+msgstr "发现新版本。选择目标版本后，可查看从当前版本到目标版本之间的全部发布说明。"
+
+#: htdocs/luci-static/resources/view/lumen/updates.js
+msgid "Target version"
+msgstr "目标版本"
+
+#: htdocs/luci-static/resources/view/lumen/updates.js
+msgid "Only published stable releases newer than the installed version are listed."
+msgstr "这里只列出高于当前版本的已发布正式版。"
+
+#: htdocs/luci-static/resources/view/lumen/updates.js
+msgid "The check could not be completed. Update status cannot be determined."
+msgstr "检查未能完成，目前不能确定更新状态。"
+
+#: htdocs/luci-static/resources/view/lumen/updates.js
+msgid "Release notes from %s to %s (%d releases)"
+msgstr "从 %s 到 %s 的更新记录（共 %d 个版本）"
+
+#: htdocs/luci-static/resources/view/lumen/updates.js
+msgid "Open this release on GitHub"
+msgstr "在 GitHub 查看此版本"
+
+#: htdocs/luci-static/resources/view/lumen/updates.js
+msgid "No release notes were provided for this version."
+msgstr "此版本没有提供更新说明。"
+
+#: htdocs/luci-static/resources/view/lumen/updates.js
+msgid "Downloads for %s (%s)"
+msgstr "%s 的下载文件（%s）"
+
+#: htdocs/luci-static/resources/view/lumen/updates.js
+msgid "The package format matches this installation. Check the target release’s firmware and LuCI requirements before installing."
+msgstr "以下包格式与当前安装匹配。安装前仍请核对目标版本要求的固件和 LuCI 版本。"
+
+#: htdocs/luci-static/resources/view/lumen/updates.js
+msgid "Verify the signing key and package signatures before installing. A checksum alone does not authenticate the publisher."
+msgstr "安装前请核对公钥并验证签名。仅凭哈希校验不能证明发布者身份。"
+
+#: htdocs/luci-static/resources/view/lumen/updates.js
+msgid "Download the files, then confirm installation in the LuCI package manager. This page does not install them."
+msgstr "下载文件后，由你在 LuCI 软件包管理页确认安装；本页不会代为安装。"
+
+#: htdocs/luci-static/resources/view/lumen/updates.js
+msgid "This release has no theme package matching the installed package format."
+msgstr "此版本没有与当前包格式匹配的主题安装包。"
+
+#: htdocs/luci-static/resources/view/lumen/updates.js
+msgid "Some assets were omitted because their download links or upload state could not be verified."
+msgstr "部分附件的下载链接或上传状态无法核实，已省略显示。"
+
+#: htdocs/luci-static/resources/view/lumen/updates.js
+msgid "The selected version cannot be compared safely. Please check again."
+msgstr "无法可靠比较所选版本，请重新检查。"
+
+#: htdocs/luci-static/resources/view/lumen/updates.js
+msgid "To install a downloaded package, open Software from the System menu."
+msgstr "要安装已下载的软件包，请从“系统”菜单进入“软件包”。"

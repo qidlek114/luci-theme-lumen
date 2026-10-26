@@ -21,6 +21,12 @@ LUCI_MAINTAINER:=Lumen contributors
 LUCI_MINIFY_CSS:=0
 LUCI_MINIFY_JS:=0
 
+# Build metadata is generated from the actual SDK configuration, not the host.
+define Build/Prepare/luci-theme-lumen
+	$(INSTALL_DIR) $(PKG_BUILD_DIR)/htdocs/luci-static/resources/lumen
+	printf '%s\n' '{"version":"$(PKG_VERSION)","format":"$(if $(CONFIG_USE_APK),apk,ipk)"}' > $(PKG_BUILD_DIR)/htdocs/luci-static/resources/lumen/version.json
+endef
+
 define Package/luci-theme-lumen/conffiles
 /etc/config/lumen
 endef

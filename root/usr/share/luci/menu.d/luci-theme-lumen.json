@@ -71,6 +71,14 @@
 			]
 		}
 	},
+	"admin/lumen/updates": {
+		"title": "Updates",
+		"order": 4,
+		"action": {
+			"type": "view",
+			"path": "lumen/updates"
+		}
+	},
 	"admin/lumen/settings": {
 		"title": "Appearance",
 		"order": 3,

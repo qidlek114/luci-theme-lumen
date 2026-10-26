@@ -63,13 +63,38 @@ download "$base_url/feeds.buildinfo" "$build_root/feeds.buildinfo"
 mkdir "$build_root/sdk"
 tar --zstd -xf "$build_root/$sdk_file" --strip-components=1 -C "$build_root/sdk"
 sdk="$build_root/sdk"
-cp "$build_root/feeds.buildinfo" "$sdk/feeds.conf.default"
+# The SDK adds a pinned base feed for core packages (ucode, lua, rpcd, etc.).
+# Release feeds.buildinfo lists only external feeds; replacing the SDK file
+# outright would remove core dependencies and their development headers.
+python3 - "$sdk/feeds.conf.default" "$build_root/feeds.buildinfo" "$build_root/base.commit" <<'PY'
+from pathlib import Path
+import re, shlex, sys
+sdk_feeds, release_feeds, commit_file = map(Path, sys.argv[1:])
+base = [line.strip() for line in sdk_feeds.read_text().splitlines()
+        if re.match(r'^src-git(?:-full)?\s+--root=package\s+base\s+', line.strip())]
+if len(base) != 1:
+    raise SystemExit('Expected one pinned base feed in the authenticated SDK.')
+parts = shlex.split(base[0])
+if len(parts) != 4 or not parts[3].startswith('https://'):
+    raise SystemExit('Unexpected SDK base feed format.')
+pin = parts[3].rsplit('^', 1)[-1]
+if not re.fullmatch(r'[0-9a-f]{40}', pin):
+    raise SystemExit('The SDK base feed is not pinned to a full commit.')
+external = release_feeds.read_text()
+if any('base' in shlex.split(line)[:-1] for line in external.splitlines()
+       if line.strip() and not line.lstrip().startswith('#')):
+    raise SystemExit('Unexpected duplicate base feed in release feeds.buildinfo.')
+sdk_feeds.write_text(base[0] + '\n' + external.rstrip() + '\n')
+commit_file.write_text(pin + '\n')
+PY
+base_commit="$(cat "$build_root/base.commit")"
 mkdir -p "$sdk/package/luci-theme-lumen"
 git -C "$repo_root" archive "$source_commit" | tar -xf - -C "$sdk/package/luci-theme-lumen"
 
 (
   cd "$sdk"
-  ./scripts/feeds update luci packages
+  ./scripts/feeds update base luci packages
+  [[ "$(git -C feeds/base rev-parse HEAD)" == "$base_commit" ]]
   [[ "$(git -C feeds/luci rev-parse HEAD)" == "$luci_commit" ]]
   ./scripts/feeds install luci-base luci-mod-status luci-theme-bootstrap
   python3 - <<'PY'
@@ -100,15 +125,16 @@ mapfile -d '' packages < <(find "$sdk/bin" -type f \( -name "luci-theme-lumen*.$
 [[ "${#packages[@]}" == 2 ]] || { echo 'Expected exactly the theme and Chinese translation packages.' >&2; exit 1; }
 cp -- "${packages[@]}" "$dist/"
 cp "$build_root/feeds.buildinfo" "$dist/feeds.buildinfo"
+cp "$sdk/feeds.conf.default" "$dist/feeds.conf"
 
-python3 - "$dist" "$release" "$format" "$source_commit" "$source_epoch" "$sdk_file" "$sdk_hash" "$feeds_hash" "$luci_commit" "$primary_key" <<'PY'
+python3 - "$dist" "$release" "$format" "$source_commit" "$source_epoch" "$sdk_file" "$sdk_hash" "$feeds_hash" "$luci_commit" "$base_commit" "$primary_key" <<'PY'
 import json, sys
 from pathlib import Path
-out, release, fmt, commit, epoch, sdk, sdk_sha, feeds_sha, luci, signer = sys.argv[1:]
+out, release, fmt, commit, epoch, sdk, sdk_sha, feeds_sha, luci, base, signer = sys.argv[1:]
 info = {
     'openwrt_release': release, 'package_format': fmt, 'source_commit': commit,
     'source_date_epoch': int(epoch), 'sdk_file': sdk, 'sdk_sha256': sdk_sha,
-    'feeds_buildinfo_sha256': feeds_sha, 'luci_commit': luci,
+    'feeds_buildinfo_sha256': feeds_sha, 'luci_commit': luci, 'base_commit': base,
     'sdk_manifest_gpg_primary_fingerprint': signer,
     'sdk_manifest_signature_verified': True,
     'signing': 'Packages are not release-signed by this job. Sign and verify before publication.',
@@ -127,6 +153,11 @@ for tool in apk opkg usign po2lmo; do
   for location in "$sdk/staging_dir/host/bin/$tool" "$sdk/staging_dir/hostpkg/bin/$tool"; do
     if [[ -x "$location" ]]; then
       cp -L "$location" "$tools_dist/host/bin/$tool"
+      # Official SDKs wrap dynamic host tools and keep their ELF next to them.
+      companion="$(dirname "$location")/.$tool.bin"
+      if [[ -f "$companion" ]]; then
+        cp -L "$companion" "$tools_dist/host/bin/.$tool.bin"
+      fi
       break
     fi
   done
@@ -139,15 +170,25 @@ for area in host hostpkg; do
     cp -a "$sdk/staging_dir/$area/lib/." "$tools_dist/$area/lib/"
   fi
 done
+for tool in apk opkg; do
+  if [[ -x "$tools_dist/host/bin/$tool" ]]; then
+    "$tools_dist/host/bin/$tool" --version
+  fi
+done
 {
   printf 'OpenWrt SDK: %s\nSource: %s\nHost: ' "$release" "$source_commit"
   uname -a
   for tool in "$tools_dist"/host/bin/*; do
     printf '\n%s\n' "$(basename "$tool")"
     file "$tool"
-    LD_LIBRARY_PATH="$tools_dist/host/lib:$tools_dist/hostpkg/lib" ldd "$tool" || true
+    binary="$tool"
+    if [[ -f "$(dirname "$tool")/.$(basename "$tool").bin" ]]; then
+      binary="$(dirname "$tool")/.$(basename "$tool").bin"
+      file "$binary"
+    fi
+    ldd "$binary" || true
   done
-  printf '\nUse a compatible Linux x86_64 host; set LD_LIBRARY_PATH to host/lib:hostpkg/lib in this artifact. No private signing key is included.\n'
+  printf '\nUse a compatible Linux x86_64 host. Keep SDK wrapper scripts, their hidden .TOOL.bin companions and host/lib together. Run the wrappers, not the hidden ELF files. Do not globally export host/lib as LD_LIBRARY_PATH because it includes the SDK libc. No private signing key is included.\n'
 } > "$tools_dist/DEPENDENCIES.txt"
 tar -czf "$repo_root/validation-tools/openwrt-$release-host-tools.tar.gz" -C "$tools_dist" .
 printf 'Built %s packages in %s\n' "$format" "$dist"
