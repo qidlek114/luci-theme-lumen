@@ -12,6 +12,7 @@ case "$release" in
     sdk_hash='1864152619092e781fa36a401960c8e9ae42d6a364c44ee5f0b197ca5f3c0fcc'
     feeds_hash='037f68494e8cf059f7cb49dbce7e0f73a3da4db1e73b2b8b7477ff2d2676f40b'
     luci_commit='75a306df84a020c57a631ef5b4c02ace56d93387'
+    base_tag_commit=''
     format='apk'
     ;;
   24.10.8)
@@ -19,6 +20,8 @@ case "$release" in
     sdk_hash='ac4a0405d2eea821b06f93c14ba13ffa90ad0457648903df7dde02570027ab21'
     feeds_hash='8abf2a8ca51671f8bae637cfc79d8dc2a07d9d5029f1f97c18e46a91d7760da3'
     luci_commit='cac97ed67cfbcad90db49f5f3b1245c2c4cbfae5'
+    # Peeled official v24.10.8 tag; this SDK still records a tag, not ^commit.
+    base_tag_commit='0b795ce79e23b553aa184080c390f9ce92a2b6d4'
     format='ipk'
     ;;
   *) printf 'Usage: %s {25.12.6|24.10.8}\n' "$0" >&2; exit 2 ;;
@@ -66,25 +69,37 @@ sdk="$build_root/sdk"
 # The SDK adds a pinned base feed for core packages (ucode, lua, rpcd, etc.).
 # Release feeds.buildinfo lists only external feeds; replacing the SDK file
 # outright would remove core dependencies and their development headers.
-python3 - "$sdk/feeds.conf.default" "$build_root/feeds.buildinfo" "$build_root/base.commit" <<'PY'
+python3 - "$sdk/feeds.conf.default" "$build_root/feeds.buildinfo" "$build_root/base.commit" "$release" "$base_tag_commit" <<'PY'
 from pathlib import Path
 import re, shlex, sys
-sdk_feeds, release_feeds, commit_file = map(Path, sys.argv[1:])
+sdk_feeds, release_feeds, commit_file = map(Path, sys.argv[1:4])
+release, tag_commit = sys.argv[4:]
 base = [line.strip() for line in sdk_feeds.read_text().splitlines()
-        if re.match(r'^src-git(?:-full)?\s+--root=package\s+base\s+', line.strip())]
+        if re.match(r'^src-git(?:-full)?\s+(?:--root=package\s+)?base\s+', line.strip())]
 if len(base) != 1:
     raise SystemExit('Expected one pinned base feed in the authenticated SDK.')
 parts = shlex.split(base[0])
-if len(parts) != 4 or not parts[3].startswith('https://'):
+if len(parts) not in (3, 4) or not parts[-1].startswith('https://'):
     raise SystemExit('Unexpected SDK base feed format.')
-pin = parts[3].rsplit('^', 1)[-1]
+url = parts[-1]
+if '^' in url:
+    pin = url.rsplit('^', 1)[-1]
+elif tag_commit and url.endswith(';v' + release):
+    # 24.10 SDKs use src-git-full base URL;vVERSION, without --root=package.
+    # Preserve that layout, but resolve the reviewed release tag to a fixed commit.
+    pin = tag_commit
+    parts[-1] = url.rsplit(';', 1)[0] + '^' + pin
+else:
+    raise SystemExit('The SDK base feed has an unexpected or floating revision.')
 if not re.fullmatch(r'[0-9a-f]{40}', pin):
     raise SystemExit('The SDK base feed is not pinned to a full commit.')
+if tag_commit and pin != tag_commit:
+    raise SystemExit('The SDK base feed differs from the reviewed release commit.')
 external = release_feeds.read_text()
 if any('base' in shlex.split(line)[:-1] for line in external.splitlines()
        if line.strip() and not line.lstrip().startswith('#')):
     raise SystemExit('Unexpected duplicate base feed in release feeds.buildinfo.')
-sdk_feeds.write_text(base[0] + '\n' + external.rstrip() + '\n')
+sdk_feeds.write_text(' '.join(parts) + '\n' + external.rstrip() + '\n')
 commit_file.write_text(pin + '\n')
 PY
 base_commit="$(cat "$build_root/base.commit")"
@@ -105,7 +120,8 @@ config = p.read_text() if p.exists() else ''
 settings = {
     'CONFIG_ALL': 'n', 'CONFIG_ALL_NONSHARED': 'n', 'CONFIG_ALL_KMODS': 'n',
     'CONFIG_PACKAGE_luci-theme-lumen': 'm',
-    'CONFIG_PACKAGE_luci-i18n-lumen-zh-cn': 'm', 'CONFIG_LUCI_LANG_zh_Hans': 'm',
+    # Some SDKs declare this language symbol as bool, so m is discarded.
+    'CONFIG_PACKAGE_luci-i18n-lumen-zh-cn': 'm', 'CONFIG_LUCI_LANG_zh_Hans': 'y',
 }
 lines = [line for line in config.splitlines() if not any(
     re.match(r'(?:# )?' + re.escape(name) + r'(?:=| is not set)', line)
@@ -115,6 +131,13 @@ lines += [f'# {name} is not set' if value == 'n' else f'{name}={value}'
 p.write_text('\n'.join(lines) + '\n')
 PY
   make defconfig
+  grep -qx 'CONFIG_LUCI_LANG_zh_Hans=y' .config
+  for package in luci-theme-lumen luci-i18n-lumen-zh-cn; do
+    grep -Eq "^CONFIG_PACKAGE_${package}=[ym]$" .config || {
+      printf 'Required package is not selected after defconfig: %s\n' "$package" >&2
+      exit 1
+    }
+  done
   if [[ "$format" == apk ]]; then grep -qx 'CONFIG_USE_APK=y' .config;
   else ! grep -qx 'CONFIG_USE_APK=y' .config; fi
   make -j"${JOBS:-2}" package/luci-theme-lumen/compile V=s SOURCE_DATE_EPOCH="$source_epoch"
@@ -122,7 +145,11 @@ PY
 
 mkdir -p "$dist" "$tools_dist/host/bin"
 mapfile -d '' packages < <(find "$sdk/bin" -type f \( -name "luci-theme-lumen*.$format" -o -name "luci-i18n-lumen-zh-cn*.$format" \) -print0)
-[[ "${#packages[@]}" == 2 ]] || { echo 'Expected exactly the theme and Chinese translation packages.' >&2; exit 1; }
+[[ "${#packages[@]}" == 2 ]] || {
+  printf 'Expected exactly the theme and Chinese translation packages; found %s.\n' "${#packages[@]}" >&2
+  printf '%s\n' "${packages[@]}" >&2
+  exit 1
+}
 cp -- "${packages[@]}" "$dist/"
 cp "$build_root/feeds.buildinfo" "$dist/feeds.buildinfo"
 cp "$sdk/feeds.conf.default" "$dist/feeds.conf"
