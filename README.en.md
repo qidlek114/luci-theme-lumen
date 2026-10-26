@@ -1,8 +1,12 @@
+<p align="center"><img src="docs/branding/logo.svg" width="72" height="72" alt="Lumen colored router icon"></p>
+
 # Lumen for LuCI
+
+[![Validate source](https://github.com/qidlek114/luci-theme-lumen/actions/workflows/validate.yml/badge.svg)](https://github.com/qidlek114/luci-theme-lumen/actions/workflows/validate.yml)
 
 A responsive theme for modern OpenWrt LuCI, with light and dark appearances, a clear sidebar, a dashboard and live charts.
 
-[简体中文](README.md) · [Releases](https://github.com/qidlek114/luci-theme-lumen/releases) · [Issues](https://github.com/qidlek114/luci-theme-lumen/issues)
+[简体中文](README.md) · [Releases](https://github.com/qidlek114/luci-theme-lumen/releases) · [Issues](https://github.com/qidlek114/luci-theme-lumen/issues) · [Contributing](CONTRIBUTING.md)
 
 ![Dark desktop appearance with synthetic demo data](docs/screenshots/desktop-dark.png)
 

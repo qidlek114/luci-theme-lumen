@@ -1,0 +1,21 @@
+name: "功能建议 / Feature request"
+description: "提出主题界面或易用性建议 / Suggest theme and usability improvements"
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: "想解决的问题 / Problem to solve"
+      description: "描述使用场景，不要包含个人网络配置。Describe the use case without personal network configuration."
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: "建议方案 / Proposed improvement"
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: "替代方案或参考 / Alternatives or references"

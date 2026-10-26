@@ -1,8 +1,12 @@
+<p align="center"><img src="docs/branding/logo.svg" width="72" height="72" alt="Lumen 彩色路由器图标"></p>
+
 # Lumen for LuCI
+
+[![源码检查](https://github.com/qidlek114/luci-theme-lumen/actions/workflows/validate.yml/badge.svg)](https://github.com/qidlek114/luci-theme-lumen/actions/workflows/validate.yml)
 
 一个面向现代 OpenWrt LuCI 的轻量界面主题：清晰的侧栏、明暗配色、实时仪表盘，以及适合窄窗口和手机的布局。
 
-[English](README.en.md) · [Releases](https://github.com/qidlek114/luci-theme-lumen/releases) · [问题反馈](https://github.com/qidlek114/luci-theme-lumen/issues)
+[English](README.en.md) · [Releases](https://github.com/qidlek114/luci-theme-lumen/releases) · [问题反馈](https://github.com/qidlek114/luci-theme-lumen/issues) · [参与贡献](CONTRIBUTING.md)
 
 ![Lumen 深色桌面界面，使用演示数据](docs/screenshots/desktop-dark.png)
 

@@ -1,0 +1,38 @@
+name: "问题反馈 / Bug report"
+description: "报告布局、兼容性或功能问题 / Report layout, compatibility or behavior issues"
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: "请先搜索已有问题。不要提交密码、密钥、订阅、完整备份或未脱敏的日志。Search existing issues first. Do not share secrets or full router backups."
+  - type: input
+    id: version
+    attributes:
+      label: "主题版本 / Lumen version"
+      placeholder: "v1.0.0 or commit SHA"
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: "环境 / Environment"
+      description: "固件与 LuCI 版本、浏览器版本、窗口宽度、页面路径；无需真实设备地址。Firmware/LuCI/browser versions, viewport width and page path; no device addresses needed."
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: "复现步骤 / Steps to reproduce"
+    validations:
+      required: true
+  - type: textarea
+    id: behavior
+    attributes:
+      label: "预期与实际结果 / Expected and actual behavior"
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: "脱敏截图或日志 / Redacted evidence"
+      description: "可选。请遮去个人信息、公网 IP、MAC、Cookie 等。Optional; remove personal data, IPs, MACs, cookies and credentials."
