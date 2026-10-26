@@ -1,0 +1,12 @@
+node_modules/
+dist/
+*.apk
+*.ipk
+*.lmo
+.DS_Store
+Thumbs.db
+*.log
+*.tmp
+*.bak
+.env
+.env.*

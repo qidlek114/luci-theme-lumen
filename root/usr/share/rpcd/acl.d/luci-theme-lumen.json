@@ -1,0 +1,66 @@
+{
+	"luci-theme-lumen-dashboard": {
+		"description": "Read system metrics for the Lumen dashboard",
+		"read": {
+			"file": {
+				"/proc/stat": [
+					"read"
+				],
+				"/proc/sys/net/netfilter/nf_conntrack_max": [
+					"read"
+				]
+			},
+			"ubus": {
+				"file": [
+					"read"
+				],
+				"system": [
+					"board",
+					"info"
+				],
+				"network.interface": [
+					"dump"
+				],
+				"luci-rpc": [
+					"getDHCPLeases"
+				],
+				"luci": [
+					"getRealtimeStats"
+				]
+			}
+		}
+	},
+	"luci-theme-lumen-realtime": {
+		"description": "Read interface and connection statistics for Lumen graphs",
+		"read": {
+			"ubus": {
+				"luci": [
+					"getRealtimeStats",
+					"getConntrackList"
+				],
+				"luci-rpc": [
+					"getNetworkDevices",
+					"getHostHints"
+				]
+			}
+		}
+	},
+	"luci-theme-lumen-settings": {
+		"description": "Read device identity and manage only Lumen appearance settings",
+		"read": {
+			"ubus": {
+				"system": [
+					"board"
+				]
+			},
+			"uci": [
+				"lumen"
+			]
+		},
+		"write": {
+			"uci": [
+				"lumen"
+			]
+		}
+	}
+}

@@ -1,0 +1,38 @@
+{#
+ LuCI Lumen theme — login template.
+ Based on luci-theme-bootstrap (Apache License 2.0).
+-#}
+
+{% include('header', { blank_page: true }) %}
+
+<section hidden>
+	<form method="post" class="login-form">
+		<div class="login-field">
+			<label for="luci_username">{{ _('Username') }}</label>
+			<input name="luci_username" id="luci_username" type="text" autocomplete="username" value="{{ entityencode(duser, true) }}">
+		</div>
+		<div class="login-field">
+			<label for="luci_password">{{ _('Password') }}</label>
+			<input name="luci_password" id="luci_password" type="password" autocomplete="current-password">
+		</div>
+	</form>
+
+	{% if (fuser): %}
+	<div class="alert-message error">
+		{{ _('Invalid username and/or password! Please try again.') }}
+	</div>
+	{% endif %}
+
+	<button class="btn cbi-button-positive important login-submit">{{ _('Log in') }}</button>
+</section>
+
+<div id="view">
+	<div class="spinning">{{ _('Loading view…') }}</div>
+	<script>
+		L.require('ui').then(function(ui) {
+			ui.instantiateView('lumen.sysauth');
+		});
+	</script>
+</div>
+
+{% include('footer', { blank_page: true }) %}

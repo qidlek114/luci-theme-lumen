@@ -1,0 +1,87 @@
+{
+	"admin/lumen": {
+		"title": "Lumen",
+		"order": 1,
+		"action": {
+			"type": "firstchild"
+		}
+	},
+	"admin/lumen/dashboard": {
+		"title": "Dashboard",
+		"order": 1,
+		"action": {
+			"type": "view",
+			"path": "lumen/dashboard"
+		},
+		"depends": {
+			"acl": [
+				"luci-theme-lumen-dashboard"
+			]
+		}
+	},
+	"admin/lumen/realtime": {
+		"title": "Realtime Graphs",
+		"order": 2,
+		"action": {
+			"type": "alias",
+			"path": "admin/lumen/realtime/load"
+		},
+		"depends": {
+			"acl": [
+				"luci-theme-lumen-realtime"
+			]
+		}
+	},
+	"admin/lumen/realtime/load": {
+		"title": "Load",
+		"order": 1,
+		"action": {
+			"type": "view",
+			"path": "lumen/realtime"
+		},
+		"depends": {
+			"acl": [
+				"luci-theme-lumen-realtime"
+			]
+		}
+	},
+	"admin/lumen/realtime/bandwidth": {
+		"title": "Bandwidth",
+		"order": 2,
+		"action": {
+			"type": "view",
+			"path": "lumen/realtime"
+		},
+		"depends": {
+			"acl": [
+				"luci-theme-lumen-realtime"
+			]
+		}
+	},
+	"admin/lumen/realtime/connections": {
+		"title": "Connections",
+		"order": 3,
+		"action": {
+			"type": "view",
+			"path": "lumen/realtime"
+		},
+		"depends": {
+			"acl": [
+				"luci-theme-lumen-realtime"
+			]
+		}
+	},
+	"admin/lumen/settings": {
+		"title": "Appearance",
+		"order": 3,
+		"action": {
+			"type": "view",
+			"path": "lumen/settings"
+		},
+		"depends": {
+			"acl": [
+				"luci-theme-lumen-settings"
+			]
+		}
+	}
+}

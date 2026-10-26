@@ -1,0 +1,5 @@
+/* Only the demo label and demo-only UI controls: dashboard styling is unchanged. */
+.demo-badge{display:inline-flex;align-items:center;gap:.25rem;white-space:nowrap;color:hsl(var(--muted-foreground));font-size:.6875rem;border:1px solid hsl(var(--border));border-radius:999px;padding:.2rem .55rem}
+.demo-loading{padding:3rem;color:hsl(var(--muted-foreground))}
+.crumbs li+li::before{content:"/";margin:0 .65rem;color:hsl(var(--muted-foreground))}
+@media(max-width:640px){.demo-badge span{display:none}.crumbs li:first-child{display:none}.crumbs li+li::before{display:none}}

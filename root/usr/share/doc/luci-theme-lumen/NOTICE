@@ -1,0 +1,49 @@
+Lumen — a LuCI theme
+Copyright 2026 Lumen contributors
+https://github.com/qidlek114/luci-theme-lumen
+
+Original Lumen code, packaging and documentation are licensed under Apache-2.0.
+Third-party components retain their own copyright notices and licenses below.
+This distribution modifies LuCI Bootstrap templates and styles, and adds the
+Lumen layout, appearance settings, dashboard, graphs and responsive behavior.
+
+LuCI Bootstrap theme and LuCI templates (Apache-2.0)
+  Copyright (C) 2008-2014 The LuCI Team <luci@lists.subsignal.org>
+  Copyright 2008 Steven Barth <steven@midlink.org>
+  Copyright 2012 David Menting <david@nut-bolt.nl>
+  Copyright 2008-2022 Jo-Philipp Wich <jo@mein.io>
+  LuCI Bootstrap Theme: Copyright 2012 Nut & Bolt
+  By David Menting <david@nut-bolt.nl>
+  Based on Bootstrap v1.4.0: Copyright 2011 Twitter, Inc.
+  https://github.com/openwrt/luci/tree/openwrt-25.12/themes/luci-theme-bootstrap
+  Files: base.css, mobile.css and the header/footer/login template foundation.
+  License: LICENSE (Apache License, Version 2.0).
+
+Lucide and Feather icons (ISC and MIT)
+  Copyright (c) 2026 Lucide Icons and Contributors
+  Copyright (c) 2013-present Cole Bemis
+  https://github.com/lucide-icons/lucide
+  Files: inline SVG icon paths in Lumen views and navigation.
+  Full license, including the Feather-derived icon list: licenses/Lucide-LICENSE.
+
+Noto Serif SC and Source Serif 4 font subsets (SIL OFL 1.1)
+  Distributed locally via Fontsource; no runtime font CDN is required.
+  https://fontsource.org/fonts/noto-serif-sc
+  https://fontsource.org/fonts/source-serif-4
+  Original Fontsource copyright and license files are retained beside the fonts:
+    htdocs/luci-static/lumen/fonts/LICENSE-noto-serif-sc.txt
+    htdocs/luci-static/lumen/fonts/LICENSE-source-serif-4.txt
+  Source Serif upstream attribution is additionally retained in
+    licenses/Source-Serif-OFL.md
+  Copyright 2014 - 2023 Adobe (http://www.adobe.com/), with Reserved Font Name
+  'Source'. All Rights Reserved. Source is a trademark of Adobe in the United
+  States and/or other countries.
+  https://github.com/adobe-fonts/source-serif
+
+OpenWrt, LuCI, Bootstrap, Fontsource, Lucide, and other product names belong to
+their respective owners. Lumen is an independent community theme. Appearance
+preset names describe visual inspiration and do not imply endorsement.
+
+The repository screenshots show synthetic demonstration data, not information
+from a deployed router. The source release contains no router backup, network
+configuration, proxy subscription, access token, password or SSH private key.

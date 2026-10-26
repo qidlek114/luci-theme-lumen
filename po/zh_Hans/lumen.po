@@ -1,0 +1,512 @@
+# Lumen simplified Chinese translation.
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 Lumen contributors
+msgid ""
+msgstr ""
+"Project-Id-Version: luci-theme-lumen 1.0.0\n"
+"Language: zh_Hans\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+
+#: htdocs/luci-static/resources/lumen/streamchart.js
+msgid "-%ds"
+msgstr "-%d 秒"
+
+#: htdocs/luci-static/resources/view/lumen/dashboard.js
+msgid "%d cores"
+msgstr "%d 核"
+
+#: htdocs/luci-static/resources/view/lumen/dashboard.js
+msgid "%d devices"
+msgstr "%d 台设备"
+
+#: htdocs/luci-static/resources/view/lumen/realtime.js
+msgid "%d total, top %d by traffic"
+msgstr "共 %d 条，按流量排序，显示前 %d 条"
+
+#: htdocs/luci-static/resources/view/lumen/dashboard.js
+msgid "%dd %dh"
+msgstr "%d天 %d小时"
+
+#: htdocs/luci-static/resources/view/lumen/dashboard.js
+msgid "%dh %dm"
+msgstr "%d小时 %d分"
+
+#: htdocs/luci-static/resources/view/lumen/dashboard.js
+msgid "%dm"
+msgstr "%d分钟"
+
+#: htdocs/luci-static/resources/view/lumen/dashboard.js
+msgid "%s · last %s"
+msgstr "%s · 最近 %s"
+
+#: htdocs/luci-static/resources/view/lumen/dashboard.js
+msgid "%s · last 60 s"
+msgstr "%s · 最近 60 秒"
+
+#: htdocs/luci-static/resources/view/lumen/dashboard.js
+msgid "%s, %s"
+msgstr "%s，%s"
+
+#: htdocs/luci-static/resources/view/lumen/realtime.js
+msgid "1 min"
+msgstr "1 分钟"
+
+#: htdocs/luci-static/resources/view/lumen/realtime.js
+msgid "15 min"
+msgstr "15 分钟"
+
+#: htdocs/luci-static/resources/view/lumen/realtime.js
+msgid "5 min"
+msgstr "5 分钟"
+
+#: htdocs/luci-static/resources/view/lumen/dashboard.js
+msgid "a few minutes"
+msgstr "几分钟"
+
+#: htdocs/luci-static/resources/view/lumen/dashboard.js
+#: htdocs/luci-static/resources/view/lumen/realtime.js
+msgid "Active connections"
+msgstr "活动连接"
+
+#: htdocs/luci-static/resources/view/lumen/realtime.js
+msgid "Active connections in the connection tracking table, by protocol."
+msgstr "路由器连接跟踪表中的活动连接，按协议分类。"
+
+#: htdocs/luci-static/resources/view/lumen/dashboard.js
+msgid "All"
+msgstr "全部"
+
+#: htdocs/luci-static/resources/view/lumen/settings.js
+msgid "Always dark"
+msgstr "始终深色"
+
+#: htdocs/luci-static/resources/view/lumen/settings.js
+msgid "Always light"
+msgstr "始终浅色"
+
+#: htdocs/luci-static/resources/view/lumen/settings.js
+#: root/usr/share/luci/menu.d/luci-theme-lumen.json
+msgid "Appearance"
+msgstr "外观"
+
+#: htdocs/luci-static/resources/view/lumen/sysauth.js
+msgid "Authorization Required"
+msgstr "需要登录"
+
+#: htdocs/luci-static/resources/view/lumen/realtime.js
+msgid "avg %s · peak %s"
+msgstr "均 %s · 峰 %s"
+
+#: htdocs/luci-static/resources/view/lumen/dashboard.js
+msgid "Backup / Upgrade"
+msgstr "备份/升级"
+
+#: root/usr/share/luci/menu.d/luci-theme-lumen.json
+msgid "Bandwidth"
+msgstr "带宽"
+
+#: htdocs/luci-static/resources/view/lumen/settings.js
+msgid "Choose the look of this interface and how the device is named in it. Changes apply to every browser after saving."
+msgstr "设置界面的外观风格，以及设备在界面中显示的名称。保存后对所有浏览器生效。"
+
+#: htdocs/luci-static/resources/view/lumen/settings.js
+msgid "Claude · paper & carbon"
+msgstr "Claude · 纸质与碳素"
+
+#: htdocs/luci-static/resources/view/lumen/settings.js
+msgid "Claude pairs a warm paper look and serif type with a carbon-fibre dark mode."
+msgstr "Claude 风格：浅色为暖调纸张质感配衬线字体，深色为碳纤维质感。"
+
+#: htdocs/luci-static/resources/lumen/streamchart.js
+msgid "Collecting data…"
+msgstr "正在采集数据…"
+
+#: htdocs/luci-static/resources/view/lumen/settings.js
+msgid "Colour mode"
+msgstr "配色模式"
+
+#: htdocs/luci-static/resources/view/lumen/realtime.js
+msgid "Connection count"
+msgstr "连接数"
+
+#: htdocs/luci-static/resources/view/lumen/realtime.js
+#: root/usr/share/luci/menu.d/luci-theme-lumen.json
+msgid "Connections"
+msgstr "连接"
+
+#: htdocs/luci-static/resources/view/lumen/dashboard.js
+msgid "CPU usage"
+msgstr "CPU 使用率"
+
+#: htdocs/luci-static/resources/menu-lumen.js
+msgid "Dark"
+msgstr "深色"
+
+#: root/usr/share/luci/menu.d/luci-theme-lumen.json
+msgid "Dashboard"
+msgstr "仪表盘"
+
+#: htdocs/luci-static/resources/view/lumen/settings.js
+msgid "Default (shadcn)"
+msgstr "默认（shadcn）"
+
+#: htdocs/luci-static/resources/view/lumen/realtime.js
+msgid "Destination"
+msgstr "目标地址"
+
+#: htdocs/luci-static/resources/view/lumen/settings.js
+msgid "Device"
+msgstr "设备"
+
+#: htdocs/luci-static/resources/view/lumen/settings.js
+msgid "Device model"
+msgstr "设备型号"
+
+#: htdocs/luci-static/resources/view/lumen/dashboard.js
+msgid "DHCP leases"
+msgstr "DHCP 租约"
+
+#: htdocs/luci-static/resources/view/lumen/settings.js
+msgid "Display name"
+msgstr "显示名称"
+
+#: htdocs/luci-static/resources/view/lumen/dashboard.js
+#: htdocs/luci-static/resources/view/lumen/realtime.js
+msgid "Download"
+msgstr "下载"
+
+#: htdocs/luci-static/resources/view/lumen/dashboard.js
+msgid "Firewall"
+msgstr "防火墙"
+
+#: htdocs/luci-static/resources/view/lumen/dashboard.js
+msgid "Firmware"
+msgstr "固件"
+
+#: htdocs/luci-static/resources/menu-lumen.js
+#: htdocs/luci-static/resources/view/lumen/settings.js
+msgid "Follow system"
+msgstr "跟随系统"
+
+#: root/usr/share/ucode/luci/template/themes/lumen/header.ut
+msgid "Go to firmware upgrade..."
+msgstr "前往固件升级…"
+
+#: root/usr/share/ucode/luci/template/themes/lumen/header.ut
+msgid "Go to password configuration..."
+msgstr "前往密码设置…"
+
+#: htdocs/luci-static/resources/view/lumen/dashboard.js
+msgid "Good afternoon"
+msgstr "下午好"
+
+#: htdocs/luci-static/resources/view/lumen/dashboard.js
+msgid "Good evening"
+msgstr "晚上好"
+
+#: htdocs/luci-static/resources/view/lumen/dashboard.js
+msgid "Good morning"
+msgstr "早上好"
+
+#: htdocs/luci-static/resources/view/lumen/dashboard.js
+msgid "Good night"
+msgstr "夜深了"
+
+#: htdocs/luci-static/resources/view/lumen/dashboard.js
+msgid "Interfaces"
+msgstr "接口"
+
+#: root/usr/share/ucode/luci/template/themes/lumen/sysauth.ut
+msgid "Invalid username and/or password! Please try again."
+msgstr "用户名或密码错误，请重试。"
+
+#: root/usr/share/ucode/luci/template/themes/lumen/header.ut
+msgid "JavaScript required!"
+msgstr "需要启用 JavaScript！"
+
+#: htdocs/luci-static/resources/view/lumen/dashboard.js
+msgid "Kernel"
+msgstr "内核"
+
+#: htdocs/luci-static/resources/view/lumen/realtime.js
+msgid "Last %d min · updated every second"
+msgstr "最近 %d 分钟 · 每秒更新"
+
+#: htdocs/luci-static/resources/view/lumen/settings.js
+msgid "Leave empty to use the detected hardware model."
+msgstr "留空则使用检测到的硬件型号。"
+
+#: htdocs/luci-static/resources/menu-lumen.js
+msgid "Light"
+msgstr "浅色"
+
+#: htdocs/luci-static/resources/view/lumen/dashboard.js
+msgid "Limit %d"
+msgstr "上限 %d"
+
+#: htdocs/luci-static/resources/view/lumen/realtime.js
+msgid "Live receive and transmit rates of each network interface."
+msgstr "各网络接口的实时收发速率。"
+
+#: htdocs/luci-static/resources/view/lumen/dashboard.js
+#: htdocs/luci-static/resources/view/lumen/realtime.js
+msgid "Live traffic"
+msgstr "实时流量"
+
+#: htdocs/luci-static/resources/view/lumen/realtime.js
+#: root/usr/share/luci/menu.d/luci-theme-lumen.json
+msgid "Load"
+msgstr "负载"
+
+#: htdocs/luci-static/resources/view/lumen/dashboard.js
+msgid "Load %s"
+msgstr "负载 %s"
+
+#: htdocs/luci-static/resources/view/lumen/realtime.js
+msgid "Load average is the number of tasks waiting for the CPU over time. Values that stay above the core count mean the system is busy."
+msgstr "平均负载反映一段时间内等待 CPU 的任务数量。数值长期高于核心数时说明系统繁忙。"
+
+#: root/usr/share/ucode/luci/template/themes/lumen/sysauth.ut
+msgid "Loading view…"
+msgstr "正在加载页面…"
+
+#: htdocs/luci-static/resources/view/lumen/settings.js
+msgid "Lock the interface to light or dark, or follow each device. When locked, the toggle in the top bar is hidden."
+msgstr "固定为浅色或深色，或跟随各设备的系统设置。固定后，顶栏的明暗切换按钮会隐藏。"
+
+#: root/usr/share/ucode/luci/template/themes/lumen/sysauth.ut
+msgid "Log in"
+msgstr "登录"
+
+#: htdocs/luci-static/resources/view/lumen/sysauth.js
+msgid "Logging in…"
+msgstr "正在登录…"
+
+#: htdocs/luci-static/resources/view/lumen/settings.js
+msgid "Look"
+msgstr "外观风格"
+
+#: root/usr/share/ucode/luci/template/themes/lumen/footer.ut
+msgid "Lua compatibility mode active"
+msgstr "已启用 Lua 兼容模式"
+
+#: root/usr/share/luci/menu.d/luci-theme-lumen.json
+msgid "Lumen"
+msgstr "Lumen"
+
+#: htdocs/luci-static/resources/view/lumen/dashboard.js
+msgid "Manage"
+msgstr "管理"
+
+#: htdocs/luci-static/resources/view/lumen/dashboard.js
+msgid "Memory"
+msgstr "内存"
+
+#: htdocs/luci-static/resources/view/lumen/dashboard.js
+msgid "Model"
+msgstr "型号"
+
+#: htdocs/luci-static/resources/menu-lumen.js
+msgid "Navigation"
+msgstr "导航"
+
+#: htdocs/luci-static/resources/view/lumen/dashboard.js
+msgid "Network interfaces"
+msgstr "网络接口"
+
+#: root/usr/share/ucode/luci/template/themes/lumen/header.ut
+msgid "No changes to settings will be stored and are lost after rebooting. This mode should only be used to install a firmware upgrade"
+msgstr "设置更改不会保存，重启后将丢失。此模式仅应用于安装固件升级。"
+
+#: htdocs/luci-static/resources/view/lumen/dashboard.js
+msgid "No devices"
+msgstr "暂无设备"
+
+#: root/usr/share/ucode/luci/template/themes/lumen/header.ut
+msgid "No password set!"
+msgstr "尚未设置密码！"
+
+#: htdocs/luci-static/resources/view/lumen/dashboard.js
+msgid "No WAN interface"
+msgstr "无外网接口"
+
+#: htdocs/luci-static/resources/view/lumen/dashboard.js
+msgid "No WAN interface found"
+msgstr "未找到 WAN 接口"
+
+#: htdocs/luci-static/resources/menu-lumen.js
+msgid "none"
+msgstr "无"
+
+#: htdocs/luci-static/resources/lumen/streamchart.js
+msgid "Now"
+msgstr "现在"
+
+#: htdocs/luci-static/resources/view/lumen/dashboard.js
+msgid "Offline"
+msgstr "离线"
+
+#: htdocs/luci-static/resources/view/lumen/dashboard.js
+msgid "Online"
+msgstr "在线"
+
+#: htdocs/luci-static/resources/view/lumen/dashboard.js
+msgid "Online devices"
+msgstr "在线设备"
+
+#: htdocs/luci-static/resources/menu-lumen.js
+msgid "Open in new window"
+msgstr "新窗口打开"
+
+#: htdocs/luci-static/resources/view/lumen/realtime.js
+msgid "Other"
+msgstr "其他"
+
+#: htdocs/luci-static/resources/view/lumen/realtime.js
+msgid "Packets"
+msgstr "包数"
+
+#: root/usr/share/ucode/luci/template/themes/lumen/sysauth.ut
+msgid "Password"
+msgstr "密码"
+
+#: htdocs/luci-static/resources/view/lumen/dashboard.js
+msgid "Processor"
+msgstr "处理器"
+
+#: htdocs/luci-static/resources/view/lumen/realtime.js
+msgid "Protocol"
+msgstr "协议"
+
+#: root/usr/share/luci/menu.d/luci-theme-lumen.json
+msgid "Realtime Graphs"
+msgstr "实时图表"
+
+#: htdocs/luci-static/resources/view/lumen/dashboard.js
+msgid "Reboot"
+msgstr "重启"
+
+#: htdocs/luci-static/resources/view/lumen/dashboard.js
+msgid "Shortcuts"
+msgstr "快捷入口"
+
+#: htdocs/luci-static/resources/view/lumen/settings.js
+msgid "Shown in the sidebar, dashboard, login page and browser title. Leave empty to use the system hostname; the real hostname is set under System."
+msgstr "显示在侧边栏、仪表盘、登录页和浏览器标题中。留空则使用系统主机名；系统真正的主机名请在「系统」中设置。"
+
+#: htdocs/luci-static/resources/view/lumen/dashboard.js
+msgid "Software"
+msgstr "软件包"
+
+#: htdocs/luci-static/resources/view/lumen/realtime.js
+msgid "Sorted by traffic, up to 100 shown"
+msgstr "按流量排序，最多显示 100 条"
+
+#: htdocs/luci-static/resources/view/lumen/realtime.js
+msgid "Source"
+msgstr "源地址"
+
+#: htdocs/luci-static/resources/view/lumen/settings.js
+msgid "Style"
+msgstr "风格"
+
+#: htdocs/luci-static/resources/view/lumen/dashboard.js
+msgid "System"
+msgstr "系统"
+
+#: htdocs/luci-static/resources/view/lumen/realtime.js
+msgid "System load"
+msgstr "系统负载"
+
+#: htdocs/luci-static/resources/view/lumen/dashboard.js
+msgid "System Log"
+msgstr "系统日志"
+
+#: root/usr/share/ucode/luci/template/themes/lumen/header.ut
+msgid "System running in recovery (initramfs) mode."
+msgstr "系统正运行于恢复（initramfs）模式。"
+
+#: htdocs/luci-static/resources/view/lumen/dashboard.js
+msgid "System storage"
+msgstr "系统存储"
+
+#: htdocs/luci-static/resources/view/lumen/dashboard.js
+msgid "Temporary space"
+msgstr "临时空间"
+
+#: htdocs/luci-static/resources/menu-lumen.js
+#: htdocs/luci-static/resources/view/lumen/dashboard.js
+msgid "Terminal"
+msgstr "终端"
+
+#: root/usr/share/ucode/luci/template/themes/lumen/header.ut
+msgid "Theme"
+msgstr "主题"
+
+#: root/usr/share/ucode/luci/template/themes/lumen/header.ut
+msgid "There is no password set on this router. Please configure a root password to protect the web interface."
+msgstr "此路由器尚未设置密码。请设置 root 密码以保护管理界面。"
+
+#: root/usr/share/ucode/luci/template/themes/lumen/header.ut
+msgid "Toggle sidebar"
+msgstr "切换侧边栏"
+
+#: htdocs/luci-static/resources/view/lumen/dashboard.js
+msgid "Total %s"
+msgstr "共 %s"
+
+#: htdocs/luci-static/resources/view/lumen/realtime.js
+msgid "Traffic"
+msgstr "流量"
+
+#: htdocs/luci-static/resources/lumen/streamchart.js
+msgid "Traffic unit"
+msgstr "流量单位"
+
+#: htdocs/luci-static/resources/view/lumen/dashboard.js
+msgid "Unified Wi-Fi"
+msgstr "统一 Wi-Fi"
+
+#: htdocs/luci-static/resources/view/lumen/dashboard.js
+msgid "Unknown device"
+msgstr "未知设备"
+
+#: htdocs/luci-static/resources/view/lumen/dashboard.js
+msgid "Up for"
+msgstr "运行"
+
+#: htdocs/luci-static/resources/view/lumen/dashboard.js
+#: htdocs/luci-static/resources/view/lumen/realtime.js
+msgid "Upload"
+msgstr "上传"
+
+#: htdocs/luci-static/resources/view/lumen/dashboard.js
+msgid "Used %s"
+msgstr "已用 %s"
+
+#: root/usr/share/ucode/luci/template/themes/lumen/sysauth.ut
+msgid "Username"
+msgstr "用户名"
+
+#: htdocs/luci-static/resources/view/lumen/dashboard.js
+msgid "Wake on LAN"
+msgstr "网络唤醒"
+
+#: htdocs/luci-static/resources/view/lumen/dashboard.js
+msgid "WAN"
+msgstr "外网"
+
+#: htdocs/luci-static/resources/view/lumen/dashboard.js
+msgid "WAN connected"
+msgstr "外网已连接"
+
+#: htdocs/luci-static/resources/view/lumen/dashboard.js
+msgid "WAN disconnected"
+msgstr "外网未连接"
+
+#: root/usr/share/ucode/luci/template/themes/lumen/header.ut
+msgid "You must enable JavaScript in your browser or LuCI will not work properly."
+msgstr "必须在浏览器中启用 JavaScript，否则 LuCI 无法正常工作。"

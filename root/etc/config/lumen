@@ -1,0 +1,3 @@
+config theme 'main'
+	option style 'default'
+	option mode 'auto'

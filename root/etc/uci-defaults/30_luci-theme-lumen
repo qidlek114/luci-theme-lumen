@@ -1,0 +1,9 @@
+#!/bin/sh
+# Register Lumen without changing the active theme or restarting services.
+
+if [ "$(uci -q get luci.themes.Lumen)" != '/luci-static/lumen' ]; then
+	uci set luci.themes.Lumen='/luci-static/lumen' || exit 1
+	uci commit luci || exit 1
+fi
+
+exit 0
