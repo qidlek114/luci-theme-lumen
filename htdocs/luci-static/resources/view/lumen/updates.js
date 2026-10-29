@@ -136,6 +136,19 @@ return view.extend({
 	async refreshAutomatic(initial) {
 		try {
 			const result = initial || await updateStatus();
+			// An older restored package can remove the normal updater while its
+			// rpcd provider is still loaded. Detect that transition and open the
+			// retained page rather than leaving a stale, unusable view behind.
+			if (this.operation === 'rollback' && (result.state === 'rolled_back' ||
+				(result.state === 'error' && result.code === 'unavailable'))) {
+				const current = await updates.readInstalled(L.resource('lumen/version.json'));
+				if (current.version !== this.initialVersion) { location.reload(); return; }
+				if (result.state === 'error') {
+					this.automaticStatus.textContent = _('Waiting for the router to reconnect…');
+					setTimeout(() => this.refreshAutomatic(), 3000);
+					return;
+				}
+			}
 			this.renderAutomatic(result);
 			if (result.state === 'waiting' && result.target) {
 				// Reload the complete page first. A successful RPC alone does not prove

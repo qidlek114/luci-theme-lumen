@@ -289,6 +289,23 @@ test('automatic updates have fixed RPC calls and confirm only after a page reloa
 	assert.deepEqual(calls.find(c => c.method === 'confirm'), { object: 'lumen.update', method: 'confirm', args: [] });
 });
 
+test('rollback reloads the retained page when the old package removes the normal updater', async () => {
+	let version = '1.0.4', reloads = 0, retries = 0;
+	const u = helper(async () => response({ version, format: 'apk' }));
+	const view = makeView(u, async () => menuWith('package-manager'), {
+		location: { reload: () => { reloads++; } },
+		setTimeout: () => { retries++; }
+	});
+	view.render(await view.load());
+	view.operation = 'rollback';
+	await view.refreshAutomatic({ state: 'error', code: 'unavailable' });
+	assert.equal(reloads, 0, 'Do not reload before the version changes');
+	assert.equal(retries, 2, 'Keep watching while the restored package is being installed');
+	version = '1.0.2';
+	await view.refreshAutomatic({ state: 'error', code: 'unavailable' });
+	assert.equal(reloads, 1, 'Open the retained update page after the version changes');
+});
+
 test('retained update page starts without theme-owned updater and confirms only after a reload and all new assets', async () => {
 	const calls = [], storage = new Map(); let reloads = 0, missing = '';
 	const rpc = { declare: ({ object, method }) => async (...args) => {
