@@ -581,7 +581,7 @@ msgstr "检查更新"
 
 #: htdocs/luci-static/resources/view/lumen/updates.js
 msgid "Updates are checked only when you press the button."
-msgstr "仅在点击按钮后检查更新，不会自动升级。"
+msgstr "仅在点击按钮后检查并安装更新，不会定时检查或后台升级。"
 
 #: htdocs/luci-static/resources/view/lumen/updates.js
 msgid "Installed version or package format is unavailable. Update status cannot be determined."

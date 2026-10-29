@@ -73,7 +73,7 @@ config theme 'main'
 
 ## Automatic updates and release history
 
-Open **Lumen → Updates** and press **Check and update automatically**. The router downloads, verifies and installs the update; confirmation follows a successful page reload, with recovery on failure. First install a verified package containing the updater. See the [automatic update guide](docs/AUTOMATIC-UPDATES.md) for firmware matching, proxy access and recovery conditions.
+Open **Lumen → Updates** and press **Check and update automatically**. The router downloads, verifies and installs the update; confirmation follows a successful page reload, with recovery on failure. After a rollback from v1.0.4, the same page can update again even on older supported releases. First install a verified package containing the updater. See the [automatic update guide](docs/AUTOMATIC-UPDATES.md) for firmware matching, proxy access and recovery conditions.
 
 Use **Check release history in this browser** to select a version and download it manually. This check reads local package metadata and contacts the public GitHub API from the browser without login credentials or tokens.
 

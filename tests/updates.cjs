@@ -5,6 +5,7 @@ const path = require('node:path');
 const root = path.resolve(__dirname, '..');
 const helperSource = fs.readFileSync(path.join(root, 'htdocs/luci-static/resources/lumen/updates.js'), 'utf8');
 const viewSource = fs.readFileSync(path.join(root, 'htdocs/luci-static/resources/view/lumen/updates.js'), 'utf8');
+const rescueViewSource = fs.readFileSync(path.join(root, 'root/usr/share/lumen-update/rescue/view.js'), 'utf8');
 const API = 'https://api.github.com/repos/qidlek114/luci-theme-lumen/releases';
 const REPO = 'https://github.com/qidlek114/luci-theme-lumen/releases';
 const helper = fetcher => new Function('baseclass', 'fetch', helperSource)({ extend: value => value }, fetcher);
@@ -286,6 +287,50 @@ test('automatic updates have fixed RPC calls and confirm only after a page reloa
 	assetOK = true;
 	await view.refreshAutomatic({ state: 'waiting', target: '1.0.3' });
 	assert.deepEqual(calls.find(c => c.method === 'confirm'), { object: 'lumen.update', method: 'confirm', args: [] });
+});
+
+test('rollback reloads the retained page when the old package removes the normal updater', async () => {
+	let version = '1.0.4', reloads = 0, retries = 0;
+	const u = helper(async () => response({ version, format: 'apk' }));
+	const view = makeView(u, async () => menuWith('package-manager'), {
+		location: { reload: () => { reloads++; } },
+		setTimeout: () => { retries++; }
+	});
+	view.render(await view.load());
+	view.operation = 'rollback';
+	await view.refreshAutomatic({ state: 'error', code: 'unavailable' });
+	assert.equal(reloads, 0, 'Do not reload before the version changes');
+	assert.equal(retries, 2, 'Keep watching while the restored package is being installed');
+	version = '1.0.2';
+	await view.refreshAutomatic({ state: 'error', code: 'unavailable' });
+	assert.equal(reloads, 1, 'Open the retained update page after the version changes');
+});
+
+test('retained update page starts without theme-owned updater and confirms only after a reload and all new assets', async () => {
+	const calls = [], storage = new Map(); let reloads = 0, missing = '';
+	const rpc = { declare: ({ object, method }) => async (...args) => {
+		calls.push({ object, method, args });
+		return method === 'start' ? { state: 'started' } : { state: 'idle' };
+	} };
+	const localFetch = async url => ({ ok: !url.includes(missing || '\0'), json: async () => ({ version: '1.0.4' }) });
+	const rescue = new Function('view', 'rpc', 'L', 'E', 'document', 'fetch', 'setTimeout', 'sessionStorage', 'location', rescueViewSource)(
+		{ extend: value => value }, rpc, { ...L, env: { lang: 'zh-cn' } }, E, { documentElement: { lang: 'zh-cn' } },
+		localFetch, () => 0, { getItem: k => storage.get(k), setItem: (k, v) => storage.set(k, v), removeItem: k => storage.delete(k) },
+		{ reload: () => { reloads++; } });
+	const tree = rescue.render(await rescue.load());
+	assert(tree.textContent.includes('一键检查并更新'));
+	await rescue.startUpdate();
+	assert.deepEqual(calls.find(c => c.method === 'start'), { object: 'lumen.recovery', method: 'start', args: [] });
+	await rescue.refresh({ state: 'waiting', target: '1.0.4' });
+	assert.equal(reloads, 1);assert(!calls.some(c => c.method === 'confirm'));
+	missing = 'view/lumen/updates.js';await rescue.refresh({ state: 'waiting', target: '1.0.4' });
+	assert(!calls.some(c => c.method === 'confirm'), 'Missing new page must not confirm the update');
+	missing = '';await rescue.refresh({ state: 'waiting', target: '1.0.4' });
+	assert.deepEqual(calls.find(c => c.method === 'confirm'), { object: 'lumen.recovery', method: 'confirm', args: [] });
+	await rescue.refresh({ state: 'success', target: '1.0.4' });
+	assert.equal(reloads, 2, 'Successful update should reopen the full page with rollback controls');
+	await rescue.refresh({ state: 'success', target: '1.0.4' });
+	assert.equal(reloads, 2, 'A missing menu change must not cause a reload loop');
 });
 
 test('the UI never reports up-to-date on errors, empty lists, or missing metadata', async () => {

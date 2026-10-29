@@ -11,6 +11,17 @@ unset OFFLINE_ROOT OPKG_CONF_DIR TMPDIR HTTP_PROXY HTTPS_PROXY ALL_PROXY http_pr
 STATE=/etc/lumen-updater
 RUNTIME=/var/run/lumen-updater
 ASSETS=/usr/share/lumen-update
+UPDATE_EXEC=/usr/libexec/lumen-update
+RESCUE_MENU=/usr/share/luci/menu.d/zz-lumen-update-rescue.json
+RESCUE_ACL=/usr/share/rpcd/acl.d/luci-app-lumen-rescue.json
+RESCUE_RPC=/usr/share/rpcd/ucode/lumen.recovery
+RESCUE_VIEW=/www/luci-static/resources/view/lumen-rescue.js
+# The independently retained copy remains usable after an older theme package
+# removes the normal updater and its assets.
+if [ "$0" = "$STATE/recovery.sh" ]; then
+	UPDATE_EXEC="$STATE/recovery.sh"
+	ASSETS="$STATE/rescue-assets"
+fi
 REPOSITORY=https://github.com/qidlek114/luci-theme-lumen/releases/download
 API=https://api.github.com/repos/qidlek114/luci-theme-lumen/releases/latest
 
@@ -38,6 +49,73 @@ init_dirs() {
 lock() {
 	exec 9>"$RUNTIME/lock" || return 1
 	flock -n 9
+}
+
+# Copy a fixed rescue file without replacing an unrelated file or following a
+# symlink. A marker identifies files installed by an earlier rescue setup.
+rescue_file() {
+	source_file="$1" destination="$2" mode="$3"
+	[ -f "$source_file" ] && [ ! -L "$source_file" ] && [ ! -L "$destination" ] || return 1
+	if [ -e "$destination" ] && [ ! -f "$STATE/rescue-installed" ]; then
+		cmp -s "$source_file" "$destination" || return 1
+	fi
+	mkdir -p "${destination%/*}" || return 1
+	temporary="$destination.lumen-tmp-$$"
+	[ ! -e "$temporary" ] && [ ! -L "$temporary" ] || return 1
+	cp "$source_file" "$temporary" && chmod "$mode" "$temporary" && mv -f "$temporary" "$destination" || {
+		rm -f "$temporary"; return 1;
+	}
+}
+
+prepare_rescue() {
+	# Stage a private copy first. Neither the updater nor its verification keys
+	# may depend on files owned by the theme being downgraded.
+	if [ "$ASSETS" != "$STATE/rescue-assets" ]; then
+		staged="$STATE/rescue-assets.tmp-$$"
+		[ ! -e "$staged" ] && [ ! -L "$staged" ] || return 1
+		mkdir -m 700 "$staged" "$staged/keys" "$staged/rescue" || return 1
+		cp "$ASSETS/keys/lumen-apk.pub" "$ASSETS/keys/lumen-usign.pub" "$staged/keys/" &&
+		cp "$ASSETS/recovery-init" "$staged/" &&
+		cp "$ASSETS/rescue/menu.json" "$ASSETS/rescue/acl.json" "$ASSETS/rescue/lumen.recovery" "$ASSETS/rescue/view.js" "$ASSETS/rescue/session-access.uc" "$staged/rescue/" || {
+			rm -rf "$staged"; return 1;
+		}
+		[ ! -L "$STATE/rescue-assets" ] || { rm -rf "$staged"; return 1; }
+		rm -rf "$STATE/rescue-assets.previous" || { rm -rf "$staged"; return 1; }
+		if [ -d "$STATE/rescue-assets" ]; then mv "$STATE/rescue-assets" "$STATE/rescue-assets.previous" || return 1; fi
+		if ! mv "$staged" "$STATE/rescue-assets"; then
+			[ ! -d "$STATE/rescue-assets.previous" ] || mv "$STATE/rescue-assets.previous" "$STATE/rescue-assets"
+			return 1
+		fi
+		rm -rf "$STATE/rescue-assets.previous"
+	fi
+	if [ "$UPDATE_EXEC" != "$STATE/recovery.sh" ]; then
+		cp "$UPDATE_EXEC" "$STATE/recovery.sh.tmp" && chmod 700 "$STATE/recovery.sh.tmp" &&
+			mv -f "$STATE/recovery.sh.tmp" "$STATE/recovery.sh" || return 1
+	fi
+	rescue_source="$STATE/rescue-assets/rescue"
+	changed=no
+	cmp -s "$rescue_source/lumen.recovery" "$RESCUE_RPC" 2>/dev/null || changed=yes
+	rescue_file "$rescue_source/acl.json" "$RESCUE_ACL" 644 &&
+	rescue_file "$rescue_source/lumen.recovery" "$RESCUE_RPC" 755 &&
+	rescue_file "$rescue_source/view.js" "$RESCUE_VIEW" 644 || return 1
+	# rpcd loads ucode providers at startup. Reload only if this small bridge is
+	# new or changed; unlike a restart, reload preserves existing sessions.
+	if [ "$changed" = yes ] || ! ubus -S list lumen.recovery >/dev/null 2>&1; then
+		/etc/init.d/rpcd reload >/dev/null 2>&1 || return 1
+	fi
+	# The init script can return before rpcd has registered its ucode objects.
+	# Wait briefly for the fixed bridge instead of treating startup as a failure.
+	rpc_attempts=0
+	while ! ubus -S list lumen.recovery >/dev/null 2>&1; do
+		[ "$rpc_attempts" -lt 10 ] || return 1
+		sleep 1
+		rpc_attempts=$((rpc_attempts+1))
+	done
+	# Existing sessions were created before the new ACL existed. Copy only
+	# permissions they already have for the normal updater to the bridge.
+	ucode "$rescue_source/session-access.uc" >/dev/null 2>&1 || return 1
+	rescue_file "$rescue_source/menu.json" "$RESCUE_MENU" 644 || return 1
+	: > "$STATE/rescue-installed"
 }
 json_value() { jsonfilter -i "$1" -e "$2" 2>/dev/null; }
 installed_info() {
@@ -263,7 +341,7 @@ fail() {
 worker() {
 	installed= target=
 	status checking none
-	for cmd in curl usign jsonfilter sha256sum uci ubus flock setsid awk sed; do
+	for cmd in curl usign jsonfilter sha256sum uci ubus ucode flock setsid awk sed cmp; do
 		command -v "$cmd" >/dev/null 2>&1 || fail runtime
 	done
 	installed_info || fail metadata
@@ -325,8 +403,7 @@ worker() {
 	simulate_set "$transaction/new" "$target" || fail new_release
 	# Install the recovery hook before changing any package. The copied worker and
 	# project keys remain available even if the theme package is interrupted.
-	cp /usr/libexec/lumen-update "$STATE/recovery.sh" || fail recovery
-	chmod 700 "$STATE/recovery.sh" || fail recovery
+	prepare_rescue || fail recovery
 	cp "$ASSETS/recovery-init" /etc/init.d/lumen-update-recovery || fail recovery
 	chmod 755 /etc/init.d/lumen-update-recovery || fail recovery
 	/etc/init.d/lumen-update-recovery enable || fail recovery
@@ -347,6 +424,8 @@ worker() {
 			previous=$(cat "$STATE/current" 2>/dev/null || :)
 			printf '%s\n' "$run" > "$STATE/current.tmp" && mv "$STATE/current.tmp" "$STATE/current" || { recover "$run" old; return 1; }
 			rm -f "$STATE/pending"
+			# Normal theme updates regain their original page after confirmation.
+			[ ! -f "$STATE/rescue-installed" ] || rm -f "$RESCUE_MENU"
 			status success none "$installed" "$target"
 			if valid_run "$previous" && [ "$previous" != "$run" ]; then rm -rf "$STATE/$previous"; fi
 			return 0
@@ -360,14 +439,12 @@ manual_rollback() {
 	[ -f "$STATE/current" ] || { status error no_backup; return 1; }
 	run=$(cat "$STATE/current")
 	read_transaction "$run" || { status error recovery; return 1; }
+	prepare_rescue || { status error recovery "$installed" "$target"; return 1; }
 	# If the rollback is interrupted, the boot hook restores the current release.
 	printf '%s new\n' "$run" > "$STATE/pending.tmp" && mv "$STATE/pending.tmp" "$STATE/pending" || { status error recovery; return 1; }
 	if ! start_watchdog; then rm -f "$STATE/pending"; status error recovery; return 1; fi
 	sync
-	if recover "$run" old; then
-		rm -f "$STATE/current"
-		return 0
-	fi
+	if recover "$run" old; then return 0; fi
 	if recover "$run" new; then
 		status error rollback_failed "$target" "$target"
 	fi
@@ -382,7 +459,7 @@ start|rollback)
 	[ ! -f "$STATE/pending" ] || { respond error pending; exit 1; }
 	if [ "$1" = rollback ] && [ ! -f "$STATE/current" ]; then respond error no_backup; exit 1; fi
 	if [ "$1" = start ]; then operation=worker; status starting; else operation=manual-rollback; status rolling_back; fi
-	setsid /usr/libexec/lumen-update "$operation" </dev/null >/dev/null 2>&1 &
+	setsid "$UPDATE_EXEC" "$operation" </dev/null >/dev/null 2>&1 &
 	respond started ;;
 confirm)
 	[ -f "$STATE/pending" ] || { respond error pending; exit 1; }

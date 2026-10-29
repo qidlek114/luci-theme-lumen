@@ -1,0 +1,18 @@
+#!/usr/bin/ucode
+'use strict';
+import { popen } from 'fs';
+
+/* This bridge accepts no caller-provided command, path or release name. */
+function run(action) {
+	let fd = popen('/etc/lumen-updater/recovery.sh ' + action + ' 2>/dev/null');
+	if (!fd) return { state: 'error', code: 'unavailable' };
+	let output = fd.read('all');
+	fd.close();
+	try { return json(output) || { state: 'error', code: 'unavailable' }; }
+	catch (e) { return { state: 'error', code: 'unavailable' }; }
+}
+return { 'lumen.recovery': {
+	status: { call: function(request) { return run('status'); } },
+	start: { call: function(request) { return run('start'); } },
+	confirm: { call: function(request) { return run('confirm'); } }
+} };
