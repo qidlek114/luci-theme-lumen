@@ -1,5 +1,9 @@
 # 安装与签名验证 / Installation and signature verification
 
+> 本页保留 v1.0.1 的原公钥和验证步骤。v1.0.2 使用不同公钥，请阅读 [v1.0.2 安装与换钥说明](INSTALL-v1.0.2.md)。
+>
+> This page preserves the v1.0.1 keys and verification steps. v1.0.2 uses different keys; see the [v1.0.2 installation and key-rotation guide](INSTALL-v1.0.2.md).
+
 **v1.0.1 的两个 SDK 构建，以及 APK／IPK 的隔离签名校验安装、升级和卸载检查已通过。** 真机仅验证了更新页界面文件部署和手动查询，没有执行完整发布包安装；隔离环境和真机均未执行完整启动或重启验收。详见[验证记录](VALIDATION.md)。以对应 [Release](https://github.com/qidlek114/luci-theme-lumen/releases) 的实际资产与验证范围为准；缺少所需包、公钥或签名时不要继续。
 
 **Both v1.0.1 SDK builds and isolated signature-checked APK/IPK installation, upgrade and removal checks passed.** The live-device check covered only update-page UI files and a manual query, not full release-package installation. Neither the isolated environments nor the router underwent a full boot/reboot test. See the [validation record](VALIDATION.md) and the corresponding Release assets. Stop if a required package, key or signature is unavailable.

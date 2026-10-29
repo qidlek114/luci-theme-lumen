@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.0.2 — 2026-10-29
+
+- Split self-hosted fonts into an optional package; use system fonts when it is absent. The signed core APK is about 98.8% smaller than the v1.0.1 theme APK.
+- Fix the Wake-on-LAN target table and action controls at narrower viewport widths.
+- Pause theme data requests in background tabs, reuse connection-limit data and limit chart redraws to reduce unnecessary work.
+- Publish separate APK and IPK core, Simplified Chinese and optional-font packages. The release signing keys changed: the unavailable old keys could not cross-sign the new keys. Verify the new fingerprints using an independent trusted channel; see the [installation and key-rotation guide](docs/INSTALL-v1.0.2.md).
+
+The final signed packages passed installation, upgrade, optional-font add/remove and fallback checks in isolated ARMv7, ARMv8 and x86_64 OpenWrt environments. ARMv7 used emulation. These are not physical-device boot or performance tests; the main router received only the scoped Wake-on-LAN style fix. See the [validation record](docs/VALIDATION-v1.0.2.md).
+
 ## 1.0.1 — 2026-10-26
 
 - Add a manual **Lumen → Updates** page using the installed package's version and format metadata.

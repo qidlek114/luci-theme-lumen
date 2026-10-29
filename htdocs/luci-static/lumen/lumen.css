@@ -2704,3 +2704,78 @@ img[src$="/icons/vrf_disabled.svg"] { content: url("data:image/svg+xml,%3Csvg xm
 	[data-page^="admin-services-wol"] #view .cbi-map { grid-template-columns: minmax(0, 1fr); }
 	[data-page^="admin-services-wol"] #view .cbi-map > .cbi-section { grid-column: 1 !important; grid-row: auto !important; }
 }
+
+/* Keep Wake-on-LAN target rows inside their card at every viewport size. */
+[data-page^="admin-services-wol"] #cbi-luci-wol-target :is(th, td).cbi-section-actions {
+	/* LuCI writes a measured width inline; it can grow on each window resize. */
+	width: auto !important;
+	min-width: 0 !important;
+}
+[data-page^="admin-services-wol"] #cbi-luci-wol-target td.cbi-section-actions > div {
+	display: inline-flex;
+	width: max-content;
+	max-width: 100%;
+	flex-wrap: wrap;
+	justify-content: flex-end;
+	vertical-align: middle;
+}
+[data-page^="admin-services-wol"] #cbi-luci-wol-target .td[data-name="name"],
+[data-page^="admin-services-wol"] #cbi-luci-wol-target .td[data-name="mac"] {
+	overflow-wrap: anywhere;
+}
+
+/* The target table needs more room than the narrow column on laptops. */
+@media (max-width: 1440px) {
+	[data-page^="admin-services-wol"] #view .cbi-map { grid-template-columns: minmax(0, 1fr); }
+	[data-page^="admin-services-wol"] #view .cbi-map > .cbi-section { grid-column: 1 !important; grid-row: auto !important; }
+}
+
+/* Turn the table into labelled cards before it becomes too narrow. */
+@media (max-width: 850px) {
+	[data-page^="admin-services-wol"] #cbi-luci-wol-target .cbi-section-table,
+	[data-page^="admin-services-wol"] #cbi-luci-wol-target .cbi-section-table > tbody {
+		display: block;
+		width: 100%;
+	}
+	[data-page^="admin-services-wol"] #cbi-luci-wol-target .cbi-section-table > thead { display: none; }
+	[data-page^="admin-services-wol"] #cbi-luci-wol-target .tr.cbi-section-table-row {
+		display: grid;
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		gap: .75rem;
+		width: 100%;
+		margin: 0 0 .75rem;
+		padding: .875rem;
+		border: 1px solid hsl(var(--border));
+		border-radius: var(--radius);
+	}
+	[data-page^="admin-services-wol"] #cbi-luci-wol-target .tr.cbi-section-table-row > .td {
+		display: block;
+		width: auto !important;
+		min-width: 0 !important;
+		max-width: none;
+		padding: 0 !important;
+		border: 0;
+		overflow: visible;
+		white-space: normal;
+	}
+	[data-page^="admin-services-wol"] #cbi-luci-wol-target .tr.cbi-section-table-row > .td[data-title]::before {
+		content: attr(data-title);
+		display: block;
+		margin-bottom: .25rem;
+		color: hsl(var(--muted-foreground));
+		font-size: .75rem;
+		font-weight: 500;
+	}
+	[data-page^="admin-services-wol"] #cbi-luci-wol-target .tr.cbi-section-table-row > .td[data-name]:not([data-name="name"]) {
+		grid-column: auto;
+	}
+	[data-page^="admin-services-wol"] #cbi-luci-wol-target .td[data-name="name"],
+	[data-page^="admin-services-wol"] #cbi-luci-wol-target .tr.cbi-section-table-row > .td.cbi-section-actions {
+		grid-column: 1 / -1;
+	}
+	[data-page^="admin-services-wol"] #cbi-luci-wol-target .tr.cbi-section-table-row > .td.cbi-section-actions {
+		padding-top: .75rem !important;
+		border-top: 1px solid hsl(var(--border));
+		text-align: right;
+	}
+}

@@ -560,6 +560,10 @@ msgid "Theme package"
 msgstr "主题安装包"
 
 #: htdocs/luci-static/resources/view/lumen/updates.js
+msgid "Optional fonts package"
+msgstr "可选字体包"
+
+#: htdocs/luci-static/resources/view/lumen/updates.js
 msgid "Simplified Chinese package"
 msgstr "简体中文包"
 
