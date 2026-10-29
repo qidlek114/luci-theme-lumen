@@ -37,6 +37,8 @@ const lifecycle=spawnSync(process.execPath,[path.join(root,'tests/package-lifecy
 process.stdout.write(lifecycle.stdout||'');assert.equal(lifecycle.status,0,lifecycle.stderr);
 const updates=spawnSync(process.execPath,[path.join(root,'tests/updates.cjs')],{encoding:'utf8'});
 process.stdout.write(updates.stdout||'');assert.equal(updates.status,0,updates.stderr);
+const automaticUpdate=spawnSync(process.execPath,[path.join(root,'tests/automatic-update.cjs')],{encoding:'utf8'});
+process.stdout.write(automaticUpdate.stdout||'');assert.equal(automaticUpdate.status,0,automaticUpdate.stderr);
 const fontPackaging=spawnSync(process.execPath,[path.join(root,'tests/font-packaging.cjs')],{encoding:'utf8'});
 process.stdout.write(fontPackaging.stdout||'');assert.equal(fontPackaging.status,0,fontPackaging.stderr);
 const performance=spawnSync(process.execPath,[path.join(root,'tests/performance.cjs')],{encoding:'utf8'});

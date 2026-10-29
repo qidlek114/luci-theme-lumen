@@ -2,7 +2,13 @@
 'require view';
 'require dom';
 'require ui';
+'require rpc';
 'require lumen.updates as updates';
+
+const updateStatus = rpc.declare({ object: 'lumen.update', method: 'status', expect: { '': {} } });
+const updateStart = rpc.declare({ object: 'lumen.update', method: 'start', expect: { '': {} } });
+const updateConfirm = rpc.declare({ object: 'lumen.update', method: 'confirm', expect: { '': {} } });
+const updateRollback = rpc.declare({ object: 'lumen.update', method: 'rollback', expect: { '': {} } });
 
 /* Even release Markdown is text: never parse remote HTML or create remote images. */
 function textNode(tag, attrs, value) {
@@ -55,12 +61,15 @@ return view.extend({
 		// Reading this local resource does not contact GitHub.
 		return Promise.all([
 			updates.readInstalled(L.resource('lumen/version.json')).catch(() => null),
-			Promise.resolve().then(() => ui.menu.load()).catch(() => null)
-		]).then(([ installed, menu ]) => ({ installed: installed, menu: menu }));
+			Promise.resolve().then(() => ui.menu.load()).catch(() => null),
+			updateStatus().catch(() => null)
+		]).then(([ installed, menu, automatic ]) => ({ installed: installed, menu: menu, automatic: automatic }));
 	},
 
 	render(data) {
 		this.installed = data.installed;
+		this.initialVersion = data.installed && data.installed.version;
+		this.operation = null;
 		const packagePath = packageManagerPath(data.menu);
 		this.busy = false;
 		this.catalog = null;
@@ -69,17 +78,23 @@ return view.extend({
 		this.details = E('div');
 		this.checkButton = textNode('button', {
 			'class': 'cbi-button cbi-button-action', type: 'button', click: () => this.checkUpdates()
-		}, _('Check GitHub for updates'));
+		}, _('Check release history in this browser'));
+		this.automaticStatus = E('p', { role: 'status', 'aria-live': 'polite' });
+		this.autoButton = textNode('button', { 'class': 'cbi-button cbi-button-apply', type: 'button', click: () => this.startAutomatic() }, _('Check and update automatically'));
+		this.rollbackButton = textNode('button', { 'class': 'cbi-button', type: 'button', click: () => this.startRollback() }, _('Restore previous version'));
 		this.renderInstalled();
 		this.setStatus(this.installed ? _('Updates are checked only when you press the button.') :
 			_('Installed version or package format is unavailable. Update status cannot be determined.'), !this.installed);
 
+		setTimeout(() => this.refreshAutomatic(data.automatic), 0);
 		return E('div', { style: 'min-width:0;max-width:100%' }, [
 			textNode('h2', {}, _('Lumen updates')),
 			E('div', { 'class': 'cbi-section', style: 'min-width:0' }, [
 				this.versionLine,
-				textNode('p', {}, _('This page checks and downloads releases only. It never installs updates or changes router settings.')),
-				textNode('p', {}, _('The check connects this browser to the public GitHub API without a token or login credentials.')),
+				textNode('p', {}, _('Automatic updates verify the release and preserve a signed rollback package. Keep this page open until the update finishes.')),
+				E('div', { style: 'display:flex;flex-wrap:wrap;gap:1em;align-items:center;margin:1em 0' }, [ this.autoButton, this.rollbackButton ]),
+				this.automaticStatus,
+				textNode('p', {}, _('The release-history check connects this browser to the public GitHub API without a token or login credentials.')),
 				E('div', { style: 'display:flex;flex-wrap:wrap;gap:1em;align-items:center;margin:1em 0' }, [
 					this.checkButton, externalLink(updates.releasesURL, _('Open GitHub releases')),
 					packagePath ? textNode('a', { href: L.url(packagePath) }, _('Open LuCI package manager')) :
@@ -89,6 +104,108 @@ return view.extend({
 			]),
 			this.details
 		]);
+	},
+
+	async startAutomatic() {
+		this.operation = 'update';
+		try { sessionStorage.removeItem('lumen-update-reloaded'); } catch (e) {}
+		this.autoButton.disabled = true;
+		this.rollbackButton.disabled = true;
+		this.automaticStatus.textContent = _('Starting the signed update check…');
+		try {
+			const result = await updateStart();
+			if (result.state === 'error') return this.renderAutomatic(result);
+			setTimeout(() => this.refreshAutomatic(), 1500);
+		}
+		catch (e) { this.renderAutomatic({ state: 'error', code: 'unavailable' }); }
+	},
+
+	async startRollback() {
+		this.operation = 'rollback';
+		this.autoButton.disabled = true;
+		this.rollbackButton.disabled = true;
+		this.automaticStatus.textContent = _('Restoring the previous signed version…');
+		try {
+			const result = await updateRollback();
+			if (result.state === 'error') return this.renderAutomatic(result);
+			setTimeout(() => this.refreshAutomatic(), 1500);
+		}
+		catch (e) { this.renderAutomatic({ state: 'error', code: 'unavailable' }); }
+	},
+
+	async refreshAutomatic(initial) {
+		try {
+			const result = initial || await updateStatus();
+			this.renderAutomatic(result);
+			if (result.state === 'waiting' && result.target) {
+				// Reload the complete page first. A successful RPC alone does not prove
+				// the new LuCI page and assets can be served and loaded by the browser.
+				const marker = 'lumen-update-reloaded';
+				if (sessionStorage.getItem(marker) !== result.target) {
+					sessionStorage.setItem(marker, result.target);
+					location.reload();
+					return;
+				}
+				const [ installed, css, js ] = await Promise.all([
+					updates.readInstalled(L.resource('lumen/version.json')),
+					fetch(L.resource('../lumen/lumen.css'), { credentials: 'same-origin', cache: 'no-store' }),
+					fetch(L.resource('lumen/updates.js'), { credentials: 'same-origin', cache: 'no-store' })
+				]);
+				if (installed.version === result.target && css.ok && js.ok) {
+					await updateConfirm();
+					sessionStorage.removeItem(marker);
+				}
+			}
+			if ([ 'starting', 'checking', 'downloading', 'installing', 'waiting', 'rolling_back' ].includes(result.state))
+				setTimeout(() => this.refreshAutomatic(), 3000);
+		}
+		catch (e) {
+			if (this.operation === 'rollback') {
+				try {
+					const current = await updates.readInstalled(L.resource('lumen/version.json'));
+					if (current.version !== this.initialVersion) { location.reload(); return; }
+				}
+				catch (ignored) {}
+			}
+			this.automaticStatus.textContent = _('Waiting for the router to reconnect…');
+			setTimeout(() => this.refreshAutomatic(), 3000);
+		}
+	},
+
+	renderAutomatic(result) {
+		const state = result && result.state || 'error';
+		const messages = {
+			idle: _('Ready to check for a signed update.'),
+			starting: _('Starting the signed update check…'),
+			current: _('No newer release was found.'),
+			checking: _('Checking the latest stable release…'),
+			downloading: _('Downloading and verifying the update and rollback packages…'),
+			installing: _('Installing the verified update…'),
+			waiting: _('Checking that the updated page loads successfully…'),
+			success: _('The signed update was installed and the page reconnected.'),
+			rolling_back: _('Restoring the previous signed version…'),
+			rolled_back: _('The previous signed version was restored.'),
+			error: _('The update did not complete. No unverified package was installed.')
+		};
+		const errors = {
+			network: _('GitHub is unreachable through the direct connection and configured local proxy.'),
+			metadata: _('The release or installed version information is invalid.'),
+			unsupported: _('The installed package version cannot be safely matched to a rollback release.'),
+			old_release: _('The previous release could not be downloaded or verified.'),
+			new_release: _('The new release could not be downloaded, verified, or matched to this firmware.'),
+			disk: _('There is not enough free storage for the update and rollback packages.'),
+			runtime: _('A required update tool is unavailable.'),
+			recovery: _('Automatic recovery needs attention. Do not remove the backup.'),
+			rollback_failed: _('The previous version could not be restored; the current version was recovered.'),
+			busy: _('Another update or rollback is already running.'),
+			pending: _('An earlier update still needs recovery.'),
+			no_backup: _('No verified previous version is available yet.'),
+			unavailable: _('The updater is unavailable. Reload the page and try again.')
+		};
+		this.automaticStatus.textContent = (messages[state] || messages.error) + (errors[result && result.code] ? ' ' + errors[result.code] : '');
+		const active = [ 'starting', 'checking', 'downloading', 'installing', 'waiting', 'rolling_back' ].includes(state);
+		this.autoButton.disabled = active;
+		this.rollbackButton.disabled = active;
 	},
 
 	renderInstalled() {
@@ -186,7 +303,7 @@ return view.extend({
 				textNode('h3', {}, _('Downloads for %s (%s)').format(selected.tag, this.installed.format.toUpperCase())),
 				textNode('p', {}, _('The package format matches this installation. Check the target release’s firmware and LuCI requirements before installing.')),
 				textNode('p', {}, _('Verify the signing key and package signatures before installing. A checksum alone does not authenticate the publisher.')),
-				textNode('p', {}, _('Download the files, then confirm installation in the LuCI package manager. This page does not install them.'))
+				textNode('p', {}, _('These download links are for manual installation. For the latest compatible release, use the automatic update button above.'))
 			];
 			if (!assets.some((asset) => asset.kind === 'theme'))
 				content.push(textNode('p', { 'class': 'alert-message warning' }, _('This release has no theme package matching the installed package format.')));

@@ -47,7 +47,11 @@ signing_subkey='92C561DE55AE6552F3C736B82B0151090606D1D9'
 download() { curl --fail --location --retry 3 --proto '=https' --tlsv1.2 "$1" -o "$2"; }
 
 mkdir -m 700 "$build_root/gnupg"
-download 'https://git.openwrt.org/keyring/plain/gpg/0x1D53D1877742E911.asc' "$build_root/openwrt-build-key.asc"
+# The official GitHub keyring mirror is a fallback for outages of git.openwrt.org.
+# In either case, the full primary fingerprint is checked immediately below.
+if ! download 'https://git.openwrt.org/keyring/plain/gpg/0x1D53D1877742E911.asc' "$build_root/openwrt-build-key.asc"; then
+  download 'https://raw.githubusercontent.com/openwrt/keyring/master/gpg/0x1D53D1877742E911.asc' "$build_root/openwrt-build-key.asc"
+fi
 key_fingerprint="$(gpg --homedir "$build_root/gnupg" --batch --show-keys --with-colons "$build_root/openwrt-build-key.asc" | awk -F: '$1=="fpr" { print $10; exit }')"
 [[ "$key_fingerprint" == "$primary_key" ]] || { echo 'Unexpected OpenWrt signing key.' >&2; exit 1; }
 gpg --homedir "$build_root/gnupg" --batch --import "$build_root/openwrt-build-key.asc"

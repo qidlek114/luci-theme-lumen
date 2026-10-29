@@ -91,7 +91,8 @@ async function loadUpdates(){
   };
   const files=await Promise.all(['lumen/updates.js','view/lumen/updates.js'].map(async p=>{const r=await fetch(assets+p);if(!r.ok)throw Error('Missing local theme module');return r.text();}));
   const updates=new Function('baseclass','fetch',files[0])({extend:x=>x},demoFetch);
-  const view=new Function('view','dom','ui','updates',files[1])({extend:x=>x},{content},{menu:{load:()=>Promise.resolve(menu)}},updates);
+  const previewRpc={declare:({method})=>async()=>method==='status'?{state:'idle'}:{state:'error',code:'unavailable'}};
+  const view=new Function('view','dom','ui','updates','rpc',files[1])({extend:x=>x},{content},{menu:{load:()=>Promise.resolve(menu)}},updates,previewRpc);
   content(document.getElementById('view'),view.render(await view.load()));
   await view.checkUpdates();
   document.documentElement.dataset.demoReady='true';

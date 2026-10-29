@@ -16,12 +16,18 @@ esac
 
 work="$(mktemp -d)"
 image="lumen-install-test:${release}-${arch}"
-trap 'docker image rm "$image" >/dev/null 2>&1 || true; rm -rf -- "$work"' EXIT
+prepared="lumen-install-test:${release}-${arch}-deps"
+container=''
+trap '[[ -z "$container" ]] || docker rm -f "$container" >/dev/null 2>&1 || true; docker image rm "$prepared" "$image" >/dev/null 2>&1 || true; rm -rf -- "$work"' EXIT
 base="https://downloads.openwrt.org/releases/$release/targets/$target/$subtype"
 rootfs="openwrt-${release}-${target}-${subtype}-rootfs.tar.gz"
 mkdir -m 700 "$work/gnupg"
 download() { curl --fail --location --retry 3 --proto '=https' --tlsv1.2 "$1" -o "$2"; }
-download 'https://git.openwrt.org/keyring/plain/gpg/0x1D53D1877742E911.asc' "$work/openwrt-key.asc"
+# The official GitHub keyring mirror is a fallback for outages of git.openwrt.org.
+# In either case, the full primary fingerprint is checked immediately below.
+if ! download 'https://git.openwrt.org/keyring/plain/gpg/0x1D53D1877742E911.asc' "$work/openwrt-key.asc"; then
+  download 'https://raw.githubusercontent.com/openwrt/keyring/master/gpg/0x1D53D1877742E911.asc' "$work/openwrt-key.asc"
+fi
 fingerprint="$(gpg --homedir "$work/gnupg" --batch --show-keys --with-colons "$work/openwrt-key.asc" | awk -F: '$1=="fpr" {print $10; exit}')"
 [[ "$fingerprint" == '8A8BC12F46B836C0F9CDB36F1D53D1877742E911' ]]
 gpg --homedir "$work/gnupg" --batch --import "$work/openwrt-key.asc"
@@ -37,8 +43,39 @@ download "$base/$rootfs" "$work/$rootfs"
   sha256sum --strict -c rootfs.sha256
 )
 
+# Also test the actual immediately preceding signed release used by the
+# updater. The older v1.0.1 fixture still checks the full-font migration.
+mkdir -p "$work/baseline"
+cp docs/keys/v1.0.2/lumen-apk.pub docs/keys/v1.0.2/lumen-usign.pub "$work/baseline/"
+openssl pkey -pubin -in "$work/baseline/lumen-apk.pub" -outform DER -out "$work/baseline-apk.der"
+printf '%s  %s\n' 'e3d1ad71726efe0d80e38e1cbffba7f328b2e49afac068a7f55d295dcaa80c75' "$work/baseline-apk.der" | sha256sum -c -
+printf '%s  %s\n' 'fc4b502acfae4dfec67c842bc5aeeedac729736a6e1b3eefe23108159faaab8d' "$work/baseline/lumen-usign.pub" | sha256sum -c -
+base_release='https://github.com/qidlek114/luci-theme-lumen/releases/download/v1.0.2'
+if [[ "$format" == apk ]]; then
+  baseline_files=(luci-theme-lumen-1.0.2-r1.apk luci-i18n-lumen-zh-cn-1.0.2.apk)
+else
+  baseline_files=(luci-theme-lumen_1.0.2-r1_all.ipk luci-i18n-lumen-zh-cn_1.0.2_all.ipk)
+fi
+for file in SHA256SUMS SHA256SUMS.sig "${baseline_files[@]}"; do
+  download "$base_release/$file" "$work/baseline/$file"
+done
+
 docker import --platform "$platform" "$work/$rootfs" "$image" >/dev/null
+# The stock images include usign, flock and rpcd-mod-ucode but not curl.
+# Install the normal, officially signed runtime dependency using the feeds
+# shipped in the authenticated rootfs; all theme tests below remain offline.
+if [[ "$format" == apk ]]; then
+  prepare='mkdir -p /var/lock && apk update && apk add curl'
+else
+  prepare='mkdir -p /var/lock && opkg update && opkg install curl'
+fi
+container="$(docker create --platform "$platform" --memory 128m --memory-swap 128m "$image" /bin/sh -c "$prepare")"
+docker start -a "$container"
+docker commit "$container" "$prepared" >/dev/null
+docker rm "$container" >/dev/null
+container=''
 docker run --rm --platform "$platform" --network none --memory 128m --memory-swap 128m \
   --mount "type=bind,src=$fixtures,dst=/fixtures,readonly" \
+  --mount "type=bind,src=$work/baseline,dst=/baseline,readonly" \
   --mount "type=bind,src=$(realpath scripts/test-arm-container.sh),dst=/test-arm.sh,readonly" \
-  "$image" /bin/sh /test-arm.sh "$format" "$arch"
+  "$prepared" /bin/sh /test-arm.sh "$format" "$arch"

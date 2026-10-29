@@ -676,8 +676,8 @@ msgid "Verify the signing key and package signatures before installing. A checks
 msgstr "安装前请核对公钥并验证签名。仅凭哈希校验不能证明发布者身份。"
 
 #: htdocs/luci-static/resources/view/lumen/updates.js
-msgid "Download the files, then confirm installation in the LuCI package manager. This page does not install them."
-msgstr "下载文件后，由你在 LuCI 软件包管理页确认安装；本页不会代为安装。"
+msgid "These download links are for manual installation. For the latest compatible release, use the automatic update button above."
+msgstr "这些下载链接用于手动安装。如需安装兼容的最新版本，请使用上方的自动更新按钮。"
 
 #: htdocs/luci-static/resources/view/lumen/updates.js
 msgid "This release has no theme package matching the installed package format."
@@ -694,3 +694,93 @@ msgstr "无法可靠比较所选版本，请重新检查。"
 #: htdocs/luci-static/resources/view/lumen/updates.js
 msgid "To install a downloaded package, open Software from the System menu."
 msgstr "要安装已下载的软件包，请从“系统”菜单进入“软件包”。"
+
+msgid "Check and update automatically"
+msgstr "一键检查并更新"
+
+msgid "Restore previous version"
+msgstr "恢复上一个版本"
+
+msgid "Automatic updates verify the release and preserve a signed rollback package. Keep this page open until the update finishes."
+msgstr "自动更新会验证发布包签名并保留已验证的回退包。请保持本页面打开，直到更新完成。"
+
+msgid "Starting the signed update check…"
+msgstr "正在启动签名更新检查…"
+
+msgid "Restoring the previous signed version…"
+msgstr "正在恢复上一个已签名版本…"
+
+msgid "Waiting for the router to reconnect…"
+msgstr "正在等待路由器重新连接…"
+
+msgid "Ready to check for a signed update."
+msgstr "可以检查已签名的更新。"
+
+msgid "No newer release was found."
+msgstr "没有发现更新的正式版本。"
+
+msgid "Checking the latest stable release…"
+msgstr "正在检查最新正式版本…"
+
+msgid "Downloading and verifying the update and rollback packages…"
+msgstr "正在下载并验证更新包和回退包…"
+
+msgid "Installing the verified update…"
+msgstr "正在安装已验证的更新…"
+
+msgid "Checking that the updated page loads successfully…"
+msgstr "正在检查更新后的页面能否正常加载…"
+
+msgid "The signed update was installed and the page reconnected."
+msgstr "已安装签名更新，页面已成功重新连接。"
+
+msgid "The previous signed version was restored."
+msgstr "已恢复上一个已签名版本。"
+
+msgid "The update did not complete. No unverified package was installed."
+msgstr "更新未完成，未安装未经验证的软件包。"
+
+msgid "GitHub is unreachable through the direct connection and configured local proxy."
+msgstr "无法通过直连或现有本地代理访问 GitHub。"
+
+msgid "The release or installed version information is invalid."
+msgstr "发布版本或已安装版本的信息无效。"
+
+msgid "The installed package version cannot be safely matched to a rollback release."
+msgstr "无法为已安装的版本找到可安全匹配的回退包。"
+
+msgid "The previous release could not be downloaded or verified."
+msgstr "无法下载或验证上一个版本。"
+
+msgid "The new release could not be downloaded, verified, or matched to this firmware."
+msgstr "无法下载、验证新版本，或该版本与当前固件不匹配。"
+
+msgid "There is not enough free storage for the update and rollback packages."
+msgstr "可用空间不足，无法保存更新包和回退包。"
+
+msgid "A required update tool is unavailable."
+msgstr "缺少更新所需的工具。"
+
+msgid "Automatic recovery needs attention. Do not remove the backup."
+msgstr "自动恢复需要检查，请保留备份。"
+
+msgid "Another update or rollback is already running."
+msgstr "另一个更新或回退操作正在进行。"
+
+msgid "An earlier update still needs recovery."
+msgstr "之前的更新仍需要恢复。"
+
+msgid "No verified previous version is available yet."
+msgstr "暂时没有可用的已验证旧版本。"
+
+msgid "The updater is unavailable. Reload the page and try again."
+msgstr "更新器暂不可用，请刷新页面后重试。"
+
+msgid "The previous version could not be restored; the current version was recovered."
+msgstr "无法恢复上一个版本，已恢复到当前版本。"
+
+msgid "Check release history in this browser"
+msgstr "通过浏览器查看发布历史"
+
+msgid "The release-history check connects this browser to the public GitHub API without a token or login credentials."
+msgstr "发布历史检查通过当前浏览器连接公开的 GitHub 接口，不使用令牌或登录凭据。"

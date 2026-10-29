@@ -62,5 +62,24 @@
 				"lumen"
 			]
 		}
+	},
+	"luci-theme-lumen-updater": {
+		"description": "Manage signed Lumen theme updates and recovery",
+		"read": {
+			"ubus": {
+				"lumen.update": [
+					"status"
+				]
+			}
+		},
+		"write": {
+			"ubus": {
+				"lumen.update": [
+					"start",
+					"confirm",
+					"rollback"
+				]
+			}
+		}
 	}
 }

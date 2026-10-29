@@ -90,6 +90,64 @@ if [ -d /www/luci-static/lumen/fonts ]; then
   test -z "$(find /www/luci-static/lumen/fonts -type f -print -quit)"
 fi
 ucode -T -c /usr/share/ucode/luci/template/themes/lumen/header.ut > /tmp/lumen-header.uc
+ucode -c /usr/share/rpcd/ucode/lumen.update > /tmp/lumen-rpc.uc
+
+# Roll back with the real package manager while offline, then upgrade again.
+# This exercises signed APK downgrade and the opkg no-feed configuration;
+# the container does not claim a real device reboot or browser acceptance.
+if [ "$format" = apk ]; then
+  apk --network=no --cache=no --repositories-file /dev/null add --simulate "$old_theme" "$old_zh"
+  apk --network=no --cache=no --repositories-file /dev/null add "$old_theme" "$old_zh"
+else
+  mkdir -p /tmp/lumen-opkg-empty /tmp/lumen-opkg-lists
+  {
+    printf 'dest root /\ndest ram /tmp\nlists_dir ext /tmp/lumen-opkg-lists\n'
+    opkg print-architecture | awk '/^arch [A-Za-z0-9_+-]+ [0-9]+$/ {print}'
+  } > /tmp/lumen-opkg.conf
+  OPKG_CONF_DIR=/tmp/lumen-opkg-empty opkg --conf /tmp/lumen-opkg.conf --force-downgrade --noaction install "$old_theme" "$old_zh"
+  OPKG_CONF_DIR=/tmp/lumen-opkg-empty opkg --conf /tmp/lumen-opkg.conf --force-downgrade install "$old_theme" "$old_zh"
+fi
+[ "$(uci get lumen.main.style)" = 'claude' ]
+[ "$(uci get luci.main.mediaurlbase)" = '/luci-static/lumen' ]
+test -f /www/luci-static/lumen/fonts.css
+install_packages "$new_theme" "$new_zh"
+test ! -e /www/luci-static/lumen/fonts.css
+[ "$(uci get luci.main.mediaurlbase)" = '/luci-static/lumen' ]
+
+# Verify and downgrade to the real v1.0.2 baseline with the same offline
+# package-manager options used by the updater, then upgrade again. The
+# disposable new APK carries only the CI test key; the baseline retains the
+# project's real release signature.
+(cd /baseline && usign -V -p lumen-usign.pub -m SHA256SUMS -x SHA256SUMS.sig)
+if [ "$format" = apk ]; then
+  baseline_theme=/baseline/luci-theme-lumen-1.0.2-r1.apk
+  baseline_zh=/baseline/luci-i18n-lumen-zh-cn-1.0.2.apk
+  mkdir -p /tmp/baseline-keys
+  cp /baseline/lumen-apk.pub /tmp/baseline-keys/
+  apk --keys-dir /tmp/baseline-keys verify "$baseline_theme" "$baseline_zh"
+else
+  baseline_theme=/baseline/luci-theme-lumen_1.0.2-r1_all.ipk
+  baseline_zh=/baseline/luci-i18n-lumen-zh-cn_1.0.2_all.ipk
+fi
+(cd /baseline && awk -v core="${baseline_theme##*/}" -v zh="${baseline_zh##*/}" '$2==core || $2==zh {print; n++} END {if(n!=2) exit 1}' SHA256SUMS > /tmp/baseline.sha256 && sha256sum -c /tmp/baseline.sha256)
+if [ "$format" = apk ]; then
+  apk --keys-dir /tmp/baseline-keys --network=no --cache=no --repositories-file /dev/null add --simulate "$baseline_theme" "$baseline_zh"
+  apk --keys-dir /tmp/baseline-keys --network=no --cache=no --repositories-file /dev/null add "$baseline_theme" "$baseline_zh"
+else
+  OPKG_CONF_DIR=/tmp/lumen-opkg-empty opkg --conf /tmp/lumen-opkg.conf --force-downgrade --noaction install "$baseline_theme" "$baseline_zh"
+  OPKG_CONF_DIR=/tmp/lumen-opkg-empty opkg --conf /tmp/lumen-opkg.conf --force-downgrade install "$baseline_theme" "$baseline_zh"
+fi
+[ "$(jsonfilter -i /www/luci-static/resources/lumen/version.json -e '@.version')" = '1.0.2' ]
+[ "$(uci get lumen.main.style)" = 'claude' ]
+[ "$(uci get luci.main.mediaurlbase)" = '/luci-static/lumen' ]
+if [ "$format" = apk ]; then
+  apk --keys-dir /tmp/test-keys --network=no --cache=no --repositories-file /dev/null add --simulate "$new_theme" "$new_zh"
+  apk --keys-dir /tmp/test-keys --network=no --cache=no --repositories-file /dev/null add "$new_theme" "$new_zh"
+else
+  OPKG_CONF_DIR=/tmp/lumen-opkg-empty opkg --conf /tmp/lumen-opkg.conf --force-downgrade --noaction install "$new_theme" "$new_zh"
+  OPKG_CONF_DIR=/tmp/lumen-opkg-empty opkg --conf /tmp/lumen-opkg.conf --force-downgrade install "$new_theme" "$new_zh"
+fi
+[ "$(uci get luci.main.mediaurlbase)" = '/luci-static/lumen' ]
 
 install_packages "$new_fonts"
 test -f /www/luci-static/lumen/fonts.css
@@ -106,4 +164,4 @@ test ! -e /www/luci-static/lumen/fonts.css
 
 snapshot > /tmp/network-after
 cmp /tmp/network-before /tmp/network-after
-echo "PASS: old release upgrade, config preservation, font add/remove, theme fallback and fresh installation"
+echo "PASS: old release upgrade and downgrade, config preservation, font add/remove, theme fallback and fresh installation"

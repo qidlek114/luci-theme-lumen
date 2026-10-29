@@ -1,0 +1,19 @@
+#!/usr/bin/ucode
+'use strict';
+import { popen } from 'fs';
+
+/* No caller-supplied commands, paths, release names, or network settings. */
+function run(action) {
+	let fd = popen('/usr/libexec/lumen-update ' + action + ' 2>/dev/null');
+	if (!fd) return { state: 'error', code: 'unavailable' };
+	let output = fd.read('all');
+	fd.close();
+	try { return json(output) || { state: 'error', code: 'unavailable' }; }
+	catch (e) { return { state: 'error', code: 'unavailable' }; }
+}
+return { 'lumen.update': {
+	status: { call: function(request) { return run('status'); } },
+	start: { call: function(request) { return run('start'); } },
+	confirm: { call: function(request) { return run('confirm'); } },
+	rollback: { call: function(request) { return run('rollback'); } }
+} };

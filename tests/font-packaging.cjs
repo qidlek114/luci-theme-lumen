@@ -9,6 +9,7 @@ const path = require('node:path');
 const { spawnSync } = require('node:child_process');
 
 const root = path.resolve(__dirname, '..');
+const makefile = fs.readFileSync(path.join(root, 'Makefile'), 'utf8');
 const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'lumen-font-packaging-'));
 const collect = dir => fs.readdirSync(dir, { withFileTypes: true }).flatMap(entry => {
 	const item = path.join(dir, entry.name);
@@ -56,7 +57,7 @@ check-fonts:
 		assert(!fs.existsSync(path.join(core, 'fonts')));
 		assert.equal(collect(path.join(build, 'htdocs')).filter(p => p.endsWith('.woff2')).length, 0);
 		const version = JSON.parse(fs.readFileSync(path.join(build, 'htdocs/luci-static/resources/lumen/version.json')));
-		assert.deepEqual(version, { version: '1.0.2', format });
+		assert.deepEqual(version, { version: makefile.match(/^PKG_VERSION:=(.+)$/m)[1], format });
 		run('check-fonts');
 		const installed = path.join(addon, 'www/luci-static/lumen');
 		assert.equal(fs.readFileSync(path.join(installed, 'fonts.css'), 'utf8'), css);
