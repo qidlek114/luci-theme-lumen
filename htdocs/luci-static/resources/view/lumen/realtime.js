@@ -177,6 +177,9 @@ return view.extend({
 	},
 
 	tick() {
+		if (document.hidden)
+			return Promise.resolve();
+
 		const req = (this.mode == 'bandwidth')
 			? (this.device ? callRealtime('interface', this.device) : Promise.resolve([]))
 			: callRealtimeMode(this.mode == 'connections' ? 'conntrack' : 'load');
@@ -214,9 +217,18 @@ return view.extend({
 	},
 
 	refreshConnections() {
+		if (document.hidden)
+			return Promise.resolve();
+
 		return L.resolveDefault(callConntrack(), []).then((list) => {
+			const hosts = new Map();
+			Object.values(this.hints).forEach((host) => {
+				[ ...(host.ipaddrs || []), ...(host.ip6addrs || []) ].forEach((ip) => {
+					if (!hosts.has(ip)) hosts.set(ip, host);
+				});
+			});
 			const name = (ip) => {
-				const h = Object.values(this.hints).find((x) => (x.ipaddrs || []).includes(ip) || (x.ip6addrs || []).includes(ip));
+				const h = hosts.get(ip);
 				return h?.name ? E('span', { 'class': 'rt-host' }, [ h.name, E('small', {}, [ ip ]) ]) : ip;
 			};
 			const rows = (list || []).slice().sort((a, b) => (b.bytes || 0) - (a.bytes || 0)).slice(0, 100);

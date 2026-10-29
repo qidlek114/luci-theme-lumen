@@ -50,3 +50,59 @@ jobs:
           path: validation-tools/openwrt-${{ matrix.release }}-host-tools.tar.gz
           if-no-files-found: error
           retention-days: 7
+
+  arm-fixtures:
+    name: Prepare isolated ARM installation fixtures
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    needs: build
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@v4
+        with:
+          name: unsigned-openwrt-25.12.6-apk
+          path: fixtures/new-apk
+      - uses: actions/download-artifact@v4
+        with:
+          name: unsigned-openwrt-24.10.8-ipk
+          path: fixtures/new-ipk
+      - uses: actions/download-artifact@v4
+        with:
+          name: verification-tools-openwrt-25.12.6
+          path: fixture-tools
+      - name: Prepare test-signed copies and verify prior release
+        run: bash scripts/prepare-arm-fixtures.sh fixtures fixture-tools
+      - uses: actions/upload-artifact@v4
+        with:
+          name: arm-installation-fixtures
+          path: fixtures/
+          if-no-files-found: error
+          retention-days: 3
+
+  arm-install:
+    name: ARM ${{ matrix.arch }} / OpenWrt ${{ matrix.release }}
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 20
+    needs: arm-fixtures
+    strategy:
+      fail-fast: false
+      matrix:
+        release: ['25.12.6', '24.10.8']
+        arch: ['armv8', 'armv7']
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Enable ARMv7 emulation on the ARM64 runner
+        if: matrix.arch == 'armv7'
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: arm
+      - uses: actions/download-artifact@v4
+        with:
+          name: arm-installation-fixtures
+          path: fixtures
+      - name: Verify installation, upgrade, optional fonts and removal
+        run: bash scripts/test-arm.sh '${{ matrix.release }}' '${{ matrix.arch }}' fixtures

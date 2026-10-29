@@ -121,8 +121,18 @@ function mk(tag, attrs, parent) {
 
 const charts = new Set();
 let looping = false;
+let lastDraw = 0;
+const FRAME_INTERVAL = 1000 / 30;
 
 function tick(now) {
+	/* Samples arrive once per second. Limit layout and SVG work to 30 fps. */
+	if (now - lastDraw < FRAME_INTERVAL - 1) {
+		if (charts.size) requestAnimationFrame(tick);
+		else looping = false;
+		return;
+	}
+	lastDraw = now;
+
 	for (const c of charts) {
 		if (!c.el.isConnected) {
 			if (c.attached) charts.delete(c);

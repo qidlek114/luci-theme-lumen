@@ -110,6 +110,7 @@ return view.extend({
 	cpuPts: [],
 	wanDevice: null,
 	ctMax: 0,
+	ctMaxReadAt: 0,
 	loadAvg: [ 0, 0, 0 ],
 
 	load() {
@@ -295,13 +296,22 @@ return view.extend({
 	},
 
 	refresh() {
+		if (document.hidden)
+			return Promise.resolve();
+
+		/* This limit changes rarely; keep it current without reading it every poll. */
+		const now = Date.now();
+		const readLimit = !this.ctMaxReadAt || now - this.ctMaxReadAt >= 60000;
 		return Promise.all([
 			L.resolveDefault(callSystemInfo(), {}),
-			L.resolveDefault(fs.read('/proc/sys/net/netfilter/nf_conntrack_max'), ''),
+			readLimit ? L.resolveDefault(fs.read('/proc/sys/net/netfilter/nf_conntrack_max'), '') : null,
 			L.resolveDefault(callIfaces(), []),
 			L.resolveDefault(callLeases(), [])
 		]).then(([ info, ctMax, ifaces, leases ]) => {
-			this.ctMax = +ctMax || 0;
+			if (+ctMax > 0) {
+				this.ctMax = +ctMax;
+				this.ctMaxReadAt = now;
+			}
 			this.loadAvg = info.load || this.loadAvg;
 			this.updateMemory(info);
 			this.updateDevices(leases);
@@ -311,6 +321,9 @@ return view.extend({
 	},
 
 	fastTick() {
+		if (document.hidden)
+			return Promise.resolve();
+
 		const device = this.wanDevice;
 		return Promise.all([
 			L.resolveDefault(fs.read('/proc/stat'), ''),

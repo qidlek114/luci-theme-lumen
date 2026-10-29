@@ -8,7 +8,7 @@ A responsive theme for modern OpenWrt LuCI, with light and dark appearances, a c
 
 [简体中文](README.md) · [Releases](https://github.com/qidlek114/luci-theme-lumen/releases) · [Issues](https://github.com/qidlek114/luci-theme-lumen/issues) · [Contributing](CONTRIBUTING.md)
 
-> The in-development 1.0.2 source separates the bundled fonts into an optional package to reduce the core installation footprint. This change has not yet passed an SDK build, signing, or device installation validation; the v1.0.1 evidence below applies only to the previously released version. See the [font packaging notes](docs/FONT-PACKAGING.md).
+> The in-development 1.0.2 source separates the bundled fonts into an optional package to reduce the core installation footprint. Consult the corresponding GitHub Actions run for build and installation-test results; the v1.0.1 evidence below applies only to the previously released version. See the [font packaging notes](docs/FONT-PACKAGING.md).
 
 ![Dark desktop appearance with synthetic demo data](docs/screenshots/desktop-dark.png)
 
@@ -16,6 +16,7 @@ A responsive theme for modern OpenWrt LuCI, with light and dark appearances, a c
 
 - Light, dark or system colour mode, with two appearance presets.
 - Dedicated Lumen dashboard, load / bandwidth / connection charts and appearance settings.
+- Background tabs pause theme data requests; chart redraws are capped to reduce work on the browsing device.
 - Device identity, interfaces and metrics read from the system; optional display-name overrides.
 - Responsive tables, long text, action buttons and status cards.
 - Local SVG icons and optional self-hosted fonts; without the font package, the browsing device uses system fonts. No external font or icon CDN is required.

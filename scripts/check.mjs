@@ -39,4 +39,6 @@ const updates=spawnSync(process.execPath,[path.join(root,'tests/updates.cjs')],{
 process.stdout.write(updates.stdout||'');assert.equal(updates.status,0,updates.stderr);
 const fontPackaging=spawnSync(process.execPath,[path.join(root,'tests/font-packaging.cjs')],{encoding:'utf8'});
 process.stdout.write(fontPackaging.stdout||'');assert.equal(fontPackaging.status,0,fontPackaging.stderr);
+const performance=spawnSync(process.execPath,[path.join(root,'tests/performance.cjs')],{encoding:'utf8'});
+process.stdout.write(performance.stdout||'');assert.equal(performance.status,0,performance.stderr);
 console.log(JSON.stringify({ok:true,js,json,fonts,localCssAssets:assets,runtimeFiles:runtime.length}));
