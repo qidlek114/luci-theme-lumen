@@ -10,7 +10,7 @@ A responsive theme for modern OpenWrt LuCI, with light and dark appearances, a c
 
 > v1.0.2 separates bundled fonts into an optional package and defaults to system fonts. The core APK and IPK are each approximately 77 KiB. See the [font packaging notes](docs/FONT-PACKAGING.md).
 
-![Dark desktop appearance with synthetic demo data](docs/screenshots/desktop-dark.png)
+![Dark desktop appearance with synthetic demo data](docs/screenshots/desktop-dark-en.jpg)
 
 ## Features
 
@@ -23,11 +23,11 @@ A responsive theme for modern OpenWrt LuCI, with light and dark appearances, a c
 - English and editable Simplified Chinese PO translations.
 - Manual GitHub update checks, target-version selection and all intervening stable release notes, with matching package downloads and no automatic installation.
 
-![Light desktop appearance with synthetic demo data](docs/screenshots/desktop-light.png)
+![Light desktop appearance with synthetic demo data](docs/screenshots/desktop-light-en.jpg)
 
-<img src="docs/screenshots/mobile.png" width="360" alt="Mobile layout with synthetic demo data">
+<img src="docs/screenshots/mobile-en.jpg" width="360" alt="Mobile layout with synthetic demo data">
 
-**All screenshots use synthetic demonstration data. They are not device benchmarks or live network records.**
+**All screenshots use synthetic demonstration data. They are not device benchmarks or live network records.** To reproduce them, serve the repository root locally and open `docs/demo/?lang=en`; add `&mode=light` for the light theme or `&view=updates` for the sample update page.
 
 ## Compatibility and validation
 
@@ -84,7 +84,7 @@ Downloads are limited to this repository's target Release assets: matching theme
 <details>
 <summary>Update page demo with sample release history</summary>
 
-![Update page demo with sample release history, not actual published releases](docs/screenshots/updates-demo.png)
+![Update page demo with sample release history, not actual published releases](docs/screenshots/updates-demo-en.jpg)
 
 The 1.0.0, 1.0.1, 1.0.2 and 1.1.0 entries illustrate accumulated release notes. They do not establish that those versions have been published.
 

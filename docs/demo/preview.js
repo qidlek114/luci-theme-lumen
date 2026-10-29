@@ -1,7 +1,7 @@
 'use strict';
 /* This demo executes the theme's real dashboard and chart modules with local,
  * synthetic fixtures. It never calls LuCI RPC, reads router data, or changes UCI.
- * Every URL below resolves to this repository's own static source files. */
+ * Theme modules load locally; the update preview intercepts release requests. */
 const assets = '../../htdocs/luci-static/resources/';
 const translations = {
   'Good night':'你好','Good morning':'早上好','Good afternoon':'下午好','Good evening':'晚上好',
@@ -16,11 +16,29 @@ const translations = {
   'Online':'在线','Offline':'离线','%dd %dh':'%d 天 %d 小时','%dh %dm':'%d 小时 %d 分','%dm':'%d 分',
   '%s · last 60 s':'%s · 最近 60 秒','%s · last %s':'%s · 最近%s','a few minutes':'几分钟'
 };
-window._ = text => translations[text] || text;
+const english = document.documentElement.lang === 'en';
+const updatesDemo = document.documentElement.dataset.demoView === 'updates';
+if (english) {
+  document.title = 'Lumen · Demo data';
+  document.body.classList.replace('lang_zh-cn', 'lang_en');
+  document.querySelectorAll('[data-en]').forEach(el => { el.textContent = el.dataset.en; });
+  document.querySelectorAll('[data-en-label]').forEach(el => {
+    el.title = el.dataset.enLabel;
+    el.setAttribute('aria-label', el.dataset.enLabel);
+  });
+}
+if (updatesDemo) {
+  document.body.dataset.page = 'admin-lumen-updates';
+  document.querySelector('.brand-model').textContent = 'OpenWrt · Update preview';
+  document.querySelector('.sb-item.active .sb-text').textContent = 'Updates';
+  document.querySelector('.crumbs li:last-child').textContent = 'Updates';
+  document.querySelector('.page-footer span').textContent = 'Lumen · Sample release history; not actual published releases. This page does not connect to a router.';
+}
+window._ = text => english ? text : translations[text] || text;
 String.prototype.format = function(...args){let index=0;return this.replace(/%(?:\.(\d+))?([sdf%])/g,(_,digits,type)=>{if(type==='%')return '%';const value=args[index++];return type==='f'?Number(value).toFixed(Number(digits)||0):type==='d'?String(Math.trunc(Number(value))):String(value);});};
 function content(el, children){el.replaceChildren();const add=x=>{if(x==null)return;if(Array.isArray(x)){x.forEach(add);return}el.appendChild(x instanceof Node?x:document.createTextNode(String(x)));};add(children);return el;}
 window.E = function(tag, attrs={}, children=[]){const el=document.createElement(tag);Object.entries(attrs).forEach(([key,val])=>{if(typeof val==='function')el.addEventListener(key,val);else if(val!=null)el.setAttribute(key,String(val));});return content(el,children);};
-window.L={resolveDefault:(promise,fallback)=>Promise.resolve(promise).catch(()=>fallback),url:()=> '#demo-action'};
+window.L={resolveDefault:(promise,fallback)=>Promise.resolve(promise).catch(()=>fallback),url:()=> '#demo-action',resource:()=> '/demo/version.json'};
 window.lumenConfig={hostname:'Lumen',model:'OpenWrt Router',style:document.documentElement.dataset.style};
 const board={hostname:'Lumen',model:'OpenWrt Router',system:'Generic quad-core processor',kernel:'6.12',release:{description:'OpenWrt · LuCI preview'}};
 const fixtureTime=1767225600;
@@ -48,8 +66,36 @@ document.querySelectorAll('[data-icon]').forEach(el=>{el.innerHTML=`<svg viewBox
 document.getElementById('sidebar-toggle').addEventListener('click',()=>document.documentElement.classList.toggle(innerWidth<=1024?'sidebar-open':'sidebar-collapsed'));
 document.getElementById('sidebar-overlay').addEventListener('click',()=>document.documentElement.classList.remove('sidebar-open'));
 document.getElementById('theme-toggle').addEventListener('click',()=>{const root=document.documentElement,dark=root.dataset.darkmode!=='true';root.dataset.darkmode=String(dark);root.dataset.mode=dark?'dark':'light';});
-document.addEventListener('click',event=>{const anchor=event.target.closest('a');if(anchor?.getAttribute('href')==='#demo-action'){event.preventDefault();}});
+document.addEventListener('click',event=>{const anchor=event.target.closest('a');if(anchor&&(anchor.getAttribute('href')==='#demo-action'||(updatesDemo&&anchor.href.startsWith('https://github.com/')))){event.preventDefault();}});
+async function loadUpdates(){
+  // Local fixtures keep this preview independent of actual published releases.
+  const base='https://github.com/qidlek114/luci-theme-lumen/releases';
+  const release=(tag,id,body,assets=[])=>({id,tag_name:tag,name:tag,body,draft:false,prerelease:false,assets});
+  const tag='v1.1.0';
+  const asset=name=>({name,state:'uploaded',size:1024,browser_download_url:base+'/download/'+tag+'/'+name});
+  const releases=[
+    release('v1.0.1',1,'Sample notes\n• Installable theme and translation packages.\n• Select the theme manually after installation.'),
+    release('v1.0.2',2,'Sample notes\n• Improved responsive tables and text wrapping.\n• Clearer update status messages.'),
+    release(tag,3,'Sample notes\n• Review the full range of changes before downloading.\n• Verify the signing key and package signatures.',[
+      asset('luci-theme-lumen-1.1.0-r1.apk'),asset('lumen-apk.pub'),asset('SHA256SUMS'),asset('SHA256SUMS.sig')
+    ])
+  ];
+  const demoFetch=async url=>{
+    let value;
+    if(url==='/demo/version.json') value={version:'1.0.0',format:'apk'};
+    else if(String(url).startsWith('https://api.github.com/repos/qidlek114/luci-theme-lumen/releases?')) value=releases;
+    else throw new Error('Unexpected preview request');
+    return {ok:true,status:200,headers:{get:()=>null},json:async()=>value};
+  };
+  const files=await Promise.all(['lumen/updates.js','view/lumen/updates.js'].map(async p=>{const r=await fetch(assets+p);if(!r.ok)throw Error('Missing local theme module');return r.text();}));
+  const updates=new Function('baseclass','fetch',files[0])({extend:x=>x},demoFetch);
+  const view=new Function('view','dom','ui','updates',files[1])({extend:x=>x},{content},{menu:{load:()=>Promise.resolve(menu)}},updates);
+  content(document.getElementById('view'),view.render(await view.load()));
+  await view.checkUpdates();
+  document.documentElement.dataset.demoReady='true';
+}
 async function load(){
+  if(updatesDemo) return loadUpdates();
   const files=await Promise.all(['lumen/streamchart.js','view/lumen/dashboard.js'].map(async p=>{const r=await fetch(assets+p);if(!r.ok)throw Error('Missing local theme module');return r.text();}));
   const sc=new Function('baseclass',files[0])({extend:x=>x});
   const view=new Function('view','rpc','poll','fs','dom','ui','sc',files[1])({extend:x=>x},rpc,poll,mockfs,{content},{menu:{load:()=>Promise.resolve(menu)}},sc);
