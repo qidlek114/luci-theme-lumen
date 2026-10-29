@@ -8,6 +8,16 @@ on:
         required: false
         type: string
         default: ''
+      verify_signed_only:
+        description: 'Verify the signed v1.0.2 candidate using the selected fixtures'
+        required: false
+        type: boolean
+        default: false
+      upload_signed_draft:
+        description: 'After all signed tests pass, update the existing v1.0.2 draft assets'
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -16,7 +26,7 @@ permissions:
 jobs:
   build:
     name: OpenWrt ${{ matrix.release }} (${{ matrix.format }})
-    if: inputs.reuse_fixture_run == ''
+    if: inputs.reuse_fixture_run == '' && !inputs.verify_signed_only
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     strategy:
@@ -61,7 +71,7 @@ jobs:
 
   arm-fixtures:
     name: Prepare isolated installation fixtures
-    if: inputs.reuse_fixture_run == ''
+    if: inputs.reuse_fixture_run == '' && !inputs.verify_signed_only
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     needs: build
@@ -92,7 +102,7 @@ jobs:
 
   arm-install:
     name: ${{ matrix.arch }} / OpenWrt ${{ matrix.release }}
-    if: always() && (inputs.reuse_fixture_run != '' || needs.arm-fixtures.result == 'success')
+    if: always() && !inputs.verify_signed_only && (inputs.reuse_fixture_run != '' || needs.arm-fixtures.result == 'success')
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 20
     needs: arm-fixtures
@@ -133,3 +143,108 @@ jobs:
           done
       - name: Verify installation, upgrade, optional fonts and removal
         run: bash scripts/test-arm.sh '${{ matrix.release }}' '${{ matrix.arch }}' fixtures
+
+
+  verify-signed-candidate:
+    name: Signed candidate / ${{ matrix.arch }} / OpenWrt ${{ matrix.release }}
+    if: inputs.verify_signed_only
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {release: '25.12.6', arch: armv8, runner: ubuntu-24.04-arm}
+          - {release: '25.12.6', arch: armv7, runner: ubuntu-24.04-arm}
+          - {release: '24.10.8', arch: armv8, runner: ubuntu-24.04-arm}
+          - {release: '24.10.8', arch: armv7, runner: ubuntu-24.04-arm}
+          - {release: '25.12.6', arch: x86_64, runner: ubuntu-24.04}
+          - {release: '24.10.8', arch: x86_64, runner: ubuntu-24.04}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - name: Enable ARMv7 emulation on the ARM64 runner
+        if: matrix.arch == 'armv7'
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: arm
+      - uses: actions/download-artifact@v4
+        with:
+          name: arm-installation-fixtures
+          path: fixtures
+          run-id: ${{ inputs.reuse_fixture_run }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Bind final files and public keys to the tested fixture
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir fixtures/final-release
+          unzip -q release-candidate.zip -d fixtures/final-release
+          [[ "$(find fixtures/final-release -maxdepth 1 -type f | wc -l)" -eq 12 ]]
+          (cd fixtures/final-release && sha256sum --strict -c SHA256SUMS)
+          cmp fixtures/final-release/lumen-apk.pub docs/keys/v1.0.2/lumen-apk.pub
+          cmp fixtures/final-release/lumen-usign.pub docs/keys/v1.0.2/lumen-usign.pub
+          for info in fixtures/new-apk/BUILDINFO.json fixtures/new-ipk/BUILDINFO.json; do
+            source_commit="$(node -p "require('./$info').source_commit")"
+            [[ "$source_commit" =~ ^[0-9a-f]{40}$ ]]
+            git cat-file -e "$source_commit^{commit}"
+            git diff --exit-code "$source_commit" HEAD -- Makefile htdocs root po licenses
+          done
+          for file in fixtures/final-release/*.ipk; do cmp "$file" "fixtures/new-ipk/${file##*/}"; done
+          cp fixtures/final-release/*.apk fixtures/new-apk/
+          cp fixtures/final-release/lumen-apk.pub fixtures/test-keys/lumen-test.pub
+          (cd fixtures/new-apk && sha256sum -- *.apk > ../test-apk-sha256)
+      - name: Verify release signatures and package lifecycle
+        run: bash scripts/test-arm.sh '${{ matrix.release }}' '${{ matrix.arch }}' fixtures
+
+  upload-signed-draft:
+    name: Replace draft assets with the verified signed release
+    needs: verify-signed-candidate
+    if: inputs.verify_signed_only && inputs.upload_signed_draft && needs.verify-signed-candidate.result == 'success'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Check and upload signed candidate to the existing draft
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          mkdir final-release
+          unzip -q release-candidate.zip -d final-release
+          (cd final-release && sha256sum --strict -c SHA256SUMS)
+          cmp final-release/lumen-apk.pub docs/keys/v1.0.2/lumen-apk.pub
+          cmp final-release/lumen-usign.pub docs/keys/v1.0.2/lumen-usign.pub
+          mapfile -t files < <(find final-release -maxdepth 1 -type f | sort)
+          [[ "${#files[@]}" == 12 ]]
+          release_id="$(gh api "repos/$GITHUB_REPOSITORY/releases?per_page=100" --jq '[.[] | select(.draft == true and .tag_name == "v1.0.2" and (.name | contains("待签名"))) | .id] | if length == 1 then .[0] else empty end')"
+          [[ "$release_id" =~ ^[0-9]+$ ]]
+          for file in "${files[@]}"; do
+            name="${file##*/}"
+            [[ "$name" =~ ^[a-zA-Z0-9._-]+$ ]]
+            release="$(gh api "repos/$GITHUB_REPOSITORY/releases/$release_id")"
+            jq -e '.draft == true and .tag_name == "v1.0.2"' <<< "$release" >/dev/null
+            asset="$(jq -r --arg name "$name" '[.assets[] | select(.name == $name)] | if length == 0 then "" elif length == 1 then [.[0].id, .[0].digest] | @tsv else error("duplicate asset") end' <<< "$release")"
+            expected="sha256:$(sha256sum "$file" | cut -d ' ' -f1)"
+            if [[ -n "$asset" ]]; then
+              IFS=$'\t' read -r asset_id asset_digest <<< "$asset"
+              [[ "$asset_id" =~ ^[0-9]+$ ]]
+              if [[ "$asset_digest" == "$expected" ]]; then
+                echo "Already verified $name ($expected)"
+                continue
+              fi
+              gh api --method DELETE "repos/$GITHUB_REPOSITORY/releases/assets/$asset_id" >/dev/null
+            fi
+            actual="$(gh api --method POST -H 'Content-Type: application/octet-stream' --input "$file" "https://uploads.github.com/repos/$GITHUB_REPOSITORY/releases/$release_id/assets?name=$name" --jq .digest)"
+            [[ "$actual" == "$expected" ]]
+            echo "Uploaded and checked $name ($actual)"
+          done
+          release="$(gh api "repos/$GITHUB_REPOSITORY/releases/$release_id")"
+          jq -e '.draft == true and .tag_name == "v1.0.2" and (.assets | length == 12)' <<< "$release" >/dev/null
