@@ -23,7 +23,11 @@ base="https://downloads.openwrt.org/releases/$release/targets/$target/$subtype"
 rootfs="openwrt-${release}-${target}-${subtype}-rootfs.tar.gz"
 mkdir -m 700 "$work/gnupg"
 download() { curl --fail --location --retry 3 --proto '=https' --tlsv1.2 "$1" -o "$2"; }
-download 'https://git.openwrt.org/keyring/plain/gpg/0x1D53D1877742E911.asc' "$work/openwrt-key.asc"
+# The official GitHub keyring mirror is a fallback for outages of git.openwrt.org.
+# In either case, the full primary fingerprint is checked immediately below.
+if ! download 'https://git.openwrt.org/keyring/plain/gpg/0x1D53D1877742E911.asc' "$work/openwrt-key.asc"; then
+  download 'https://raw.githubusercontent.com/openwrt/keyring/master/gpg/0x1D53D1877742E911.asc' "$work/openwrt-key.asc"
+fi
 fingerprint="$(gpg --homedir "$work/gnupg" --batch --show-keys --with-colons "$work/openwrt-key.asc" | awk -F: '$1=="fpr" {print $10; exit}')"
 [[ "$fingerprint" == '8A8BC12F46B836C0F9CDB36F1D53D1877742E911' ]]
 gpg --homedir "$work/gnupg" --batch --import "$work/openwrt-key.asc"
