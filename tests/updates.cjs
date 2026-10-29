@@ -217,9 +217,12 @@ const dom = { content: (node, children) => { node.children = children.slice(); }
 const L = { resource: name => '/luci-static/resources/' + name, url: name => '/cgi-bin/luci/' + name };
 String.prototype.format = function (...values) { let i = 0; return this.replace(/%[sd]/g, () => String(values[i++])); };
 const menuWith = name => ({ children: { admin: { children: { system: { children: { [name]: {} } } } } } });
-const makeView = (u, loadMenu = async () => menuWith('package-manager')) =>
-	new Function('view', 'dom', 'ui', 'updates', 'L', 'E', '_', viewSource)
-		({ extend: value => value }, dom, { menu: { load: loadMenu } }, u, L, E, text => text);
+const makeView = (u, loadMenu = async () => menuWith('package-manager'), injected = {}) =>
+	new Function('view', 'dom', 'ui', 'updates', 'L', 'E', '_', 'rpc', 'setTimeout', 'sessionStorage', 'location', 'fetch', viewSource)
+		({ extend: value => value }, dom, { menu: { load: loadMenu } }, u, L, E, text => text,
+			injected.rpc || { declare: () => async () => ({ state: 'idle' }) }, injected.setTimeout || (() => 0),
+			injected.sessionStorage || { getItem: () => null, setItem: () => {}, removeItem: () => {} },
+			injected.location || { reload: () => {} }, injected.fetch || (async () => ({ ok: true })));
 
 test('the view is manual, renders hostile notes as text, and updates the full selected range', async () => {
 	const calls = [];
@@ -257,6 +260,32 @@ test('the view is manual, renders hostile notes as text, and updates the full se
 		assert.equal(link.attributes.rel, 'noopener noreferrer');
 	}
 	assert.equal(calls.length, 3, 'Target changes do not make further requests');
+});
+
+test('automatic updates have fixed RPC calls and confirm only after a page reload and local assets', async () => {
+	const calls = [], storage = new Map(); let reloads = 0, assetOK = true;
+	const injected = {
+		rpc: { declare: ({ object, method }) => async (...args) => {
+			calls.push({ object, method, args });
+			return method === 'start' ? { state: 'started' } : { state: 'idle' };
+		} },
+		sessionStorage: { getItem: k => storage.get(k), setItem: (k, v) => storage.set(k, v), removeItem: k => storage.delete(k) },
+		location: { reload: () => { reloads++; } },
+		fetch: async url => ({ ok: assetOK && url.startsWith('/luci-static/') })
+	};
+	const u = helper(async () => response({ version: '1.0.3', format: 'apk' }));
+	const view = makeView(u, async () => menuWith('package-manager'), injected);
+	view.render(await view.load());
+	await view.startAutomatic();
+	assert.deepEqual(calls.find(c => c.method === 'start'), { object: 'lumen.update', method: 'start', args: [] });
+	await view.refreshAutomatic({ state: 'waiting', target: '1.0.3' });
+	assert.equal(reloads, 1);assert.equal(calls.some(c => c.method === 'confirm'), false);
+	assetOK = false;
+	await view.refreshAutomatic({ state: 'waiting', target: '1.0.3' });
+	assert.equal(calls.some(c => c.method === 'confirm'), false, 'A missing resource cannot confirm the update');
+	assetOK = true;
+	await view.refreshAutomatic({ state: 'waiting', target: '1.0.3' });
+	assert.deepEqual(calls.find(c => c.method === 'confirm'), { object: 'lumen.update', method: 'confirm', args: [] });
 });
 
 test('the UI never reports up-to-date on errors, empty lists, or missing metadata', async () => {

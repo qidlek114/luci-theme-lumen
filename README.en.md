@@ -115,3 +115,7 @@ node scripts/check.mjs
 ## License
 
 Original Lumen code is [Apache-2.0](LICENSE). The Bootstrap foundation is Apache-2.0, Lucide/Feather icons are ISC/MIT, and bundled fonts are SIL OFL 1.1. See [NOTICE](NOTICE) and [licenses](licenses) for attribution and complete terms.
+
+## Automatic updates
+
+[Read about signature verification, proxy access, rollback, and compatibility.](docs/AUTOMATIC-UPDATES.md)

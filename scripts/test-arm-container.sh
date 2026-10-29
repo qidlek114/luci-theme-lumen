@@ -90,6 +90,29 @@ if [ -d /www/luci-static/lumen/fonts ]; then
   test -z "$(find /www/luci-static/lumen/fonts -type f -print -quit)"
 fi
 ucode -T -c /usr/share/ucode/luci/template/themes/lumen/header.ut > /tmp/lumen-header.uc
+ucode -c /usr/share/rpcd/ucode/lumen.update > /tmp/lumen-rpc.uc
+
+# Roll back with the real package manager while offline, then upgrade again.
+# This exercises signed APK downgrade and the opkg no-feed configuration;
+# the container does not claim a real device reboot or browser acceptance.
+if [ "$format" = apk ]; then
+  apk --network=no --cache=no --repositories-file /dev/null add --simulate "$old_theme" "$old_zh"
+  apk --network=no --cache=no --repositories-file /dev/null add "$old_theme" "$old_zh"
+else
+  mkdir -p /tmp/lumen-opkg-empty /tmp/lumen-opkg-lists
+  {
+    printf 'dest root /\ndest ram /tmp\nlists_dir ext /tmp/lumen-opkg-lists\n'
+    opkg print-architecture | awk '/^arch [A-Za-z0-9_+-]+ [0-9]+$/ {print}'
+  } > /tmp/lumen-opkg.conf
+  OPKG_CONF_DIR=/tmp/lumen-opkg-empty opkg --conf /tmp/lumen-opkg.conf --force-downgrade --noaction install "$old_theme" "$old_zh"
+  OPKG_CONF_DIR=/tmp/lumen-opkg-empty opkg --conf /tmp/lumen-opkg.conf --force-downgrade install "$old_theme" "$old_zh"
+fi
+[ "$(uci get lumen.main.style)" = 'claude' ]
+[ "$(uci get luci.main.mediaurlbase)" = '/luci-static/lumen' ]
+test -f /www/luci-static/lumen/fonts.css
+install_packages "$new_theme" "$new_zh"
+test ! -e /www/luci-static/lumen/fonts.css
+[ "$(uci get luci.main.mediaurlbase)" = '/luci-static/lumen' ]
 
 install_packages "$new_fonts"
 test -f /www/luci-static/lumen/fonts.css
@@ -106,4 +129,4 @@ test ! -e /www/luci-static/lumen/fonts.css
 
 snapshot > /tmp/network-after
 cmp /tmp/network-before /tmp/network-after
-echo "PASS: old release upgrade, config preservation, font add/remove, theme fallback and fresh installation"
+echo "PASS: old release upgrade and downgrade, config preservation, font add/remove, theme fallback and fresh installation"

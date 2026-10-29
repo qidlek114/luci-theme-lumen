@@ -1,0 +1,6 @@
+#!/bin/sh /etc/rc.common
+# Independent of the theme package so recovery survives an interrupted upgrade.
+START=11
+start() {
+	[ ! -f /etc/lumen-updater/pending ] || /etc/lumen-updater/recovery.sh boot-recover
+}

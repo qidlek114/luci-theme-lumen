@@ -4,15 +4,15 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=luci-theme-lumen
-PKG_VERSION:=1.0.2
+PKG_VERSION:=1.0.3
 PKG_RELEASE:=1
-PKG_PO_VERSION:=1.0.2
+PKG_PO_VERSION:=1.0.3
 PKG_LICENSE:=Apache-2.0 ISC MIT OFL-1.1
 PKG_LICENSE_FILES:=root/usr/share/doc/luci-theme-lumen/LICENSE root/usr/share/doc/luci-theme-lumen/NOTICE root/usr/share/doc/luci-theme-lumen/licenses/Lucide-LICENSE root/usr/share/doc/luci-theme-lumen/licenses/Source-Serif-OFL.md
 
 LUCI_TITLE:=Lumen theme with dashboard and appearance settings
 LUCI_DESCRIPTION:=Responsive LuCI theme for the ucode runtime, with local icons and optional self-hosted fonts.
-LUCI_DEPENDS:=+luci-base +luci-mod-status +luci-theme-bootstrap
+LUCI_DEPENDS:=+luci-base +luci-mod-status +luci-theme-bootstrap +curl +usign +rpcd-mod-ucode
 LUCI_PKGARCH:=all
 LUCI_URL:=https://github.com/qidlek114/luci-theme-lumen
 LUCI_MAINTAINER:=Lumen contributors

@@ -119,3 +119,7 @@ node scripts/check.mjs
 ## 许可
 
 Lumen 原创代码使用 [Apache-2.0](LICENSE)。基础样式和模板来自 LuCI Bootstrap；Lucide／Feather 图标使用 ISC／MIT；字体使用 SIL OFL 1.1。完整来源与归属见 [NOTICE](NOTICE) 和 [licenses](licenses)。
+
+## 自动更新
+
+[查看签名验证、代理连接、回退与兼容条件。](docs/AUTOMATIC-UPDATES.zh-CN.md)

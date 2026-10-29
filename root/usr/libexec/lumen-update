@@ -1,0 +1,398 @@
+#!/bin/sh
+# Lumen updater. All URLs, file names and privileged operations are fixed here.
+# Credentials are read only in this root process and supplied to curl on stdin.
+set -u
+umask 077
+PATH=/usr/sbin:/usr/bin:/sbin:/bin
+export PATH
+LC_ALL=C
+export LC_ALL
+unset OFFLINE_ROOT OPKG_CONF_DIR TMPDIR HTTP_PROXY HTTPS_PROXY ALL_PROXY http_proxy https_proxy all_proxy
+STATE=/etc/lumen-updater
+RUNTIME=/var/run/lumen-updater
+ASSETS=/usr/share/lumen-update
+REPOSITORY=https://github.com/qidlek114/luci-theme-lumen/releases/download
+API=https://api.github.com/repos/qidlek114/luci-theme-lumen/releases/latest
+
+status() {
+	state="$1" code="${2:-none}" installed="${3:-}" target="${4:-}"
+	printf '{"state":"%s","code":"%s","installed":"%s","target":"%s"}\n' \
+		"$state" "$code" "$installed" "$target" > "$STATE/status.tmp"
+	mv "$STATE/status.tmp" "$STATE/status.json"
+}
+respond() {
+	printf '{"state":"%s","code":"%s"}\n' "$1" "${2:-none}"
+}
+valid_version() {
+	printf '%s\n' "$1" | grep -Eq '^(0|[1-9][0-9]{0,5})\.(0|[1-9][0-9]{0,5})\.(0|[1-9][0-9]{0,5})$'
+}
+newer_than() {
+	awk -v a="$1" -v b="$2" 'BEGIN {split(a,x,"."); split(b,y,"."); for(i=1;i<=3;i++) {if(x[i]+0>y[i]+0) exit 0; if(x[i]+0<y[i]+0) exit 1} exit 1}'
+}
+valid_run() { printf '%s\n' "$1" | grep -Eq '^run-[0-9]+-[0-9]+$'; }
+init_dirs() {
+	[ ! -L "$STATE" ] && [ ! -L "$RUNTIME" ] || return 1
+	mkdir -p "$STATE" "$RUNTIME" || return 1
+	chmod 700 "$STATE" "$RUNTIME" || return 1
+}
+lock() {
+	exec 9>"$RUNTIME/lock" || return 1
+	flock -n 9
+}
+json_value() { jsonfilter -i "$1" -e "$2" 2>/dev/null; }
+installed_info() {
+	metadata=/www/luci-static/resources/lumen/version.json
+	[ -f "$metadata" ] || return 1
+	installed=$(json_value "$metadata" '@.version') || return 1
+	format=$(json_value "$metadata" '@.format') || return 1
+	valid_version "$installed" || return 1
+	case "$format" in apk|ipk) ;; *) return 1;; esac
+	firmware=$(ubus call system board '{}' | jsonfilter -e '@.release.version') || return 1
+	valid_version "$firmware" || return 1
+}
+package_installed() {
+	case "$format" in
+	apk) apk info -e "$1" >/dev/null 2>&1 ;;
+	ipk) opkg list-installed "$1" 2>/dev/null | grep -q "^$1 - " ;;
+	esac
+}
+installed_package_is() {
+	case "$format" in
+	apk) apk list -I "$1" 2>/dev/null | grep -Fq "$1-$2 " ;;
+	ipk) opkg list-installed "$1" 2>/dev/null | grep -Fxq "$1 - $2" ;;
+	esac
+}
+# Escape curl config syntax without putting credentials in a command line.
+curl_config_string() { printf '%s' "$1" | sed 's/\\/\\\\/g; s/"/\\"/g'; }
+proxy_credentials() {
+	[ "$(uci -q get openclash.config.enable 2>/dev/null || :)" = 1 ] || return 1
+	proxy_port=$(uci -q get openclash.config.http_port 2>/dev/null || :)
+	case "$proxy_port" in ''|*[!0-9]*) return 1;; esac
+	[ "$proxy_port" -ge 1 ] 2>/dev/null && [ "$proxy_port" -le 65535 ] || return 1
+	proxy_user= proxy_pass=
+	index=0
+	while [ "$index" -lt 16 ]; do
+		section="openclash.@authentication[$index]"
+		if [ "$(uci -q get "$section.enabled" 2>/dev/null || :)" = 1 ]; then
+			proxy_user=$(uci -q get "$section.username" 2>/dev/null || :)
+			proxy_pass=$(uci -q get "$section.password" 2>/dev/null || :)
+			[ -n "$proxy_user" ] && [ -n "$proxy_pass" ] || return 1
+			case "$proxy_user" in *:*) return 1;; esac
+			# Config values with control characters cannot be represented safely.
+			if printf '%s%s' "$proxy_user" "$proxy_pass" | grep -q '[[:cntrl:]]'; then return 1; fi
+			break
+		fi
+		index=$((index+1))
+	done
+}
+fetch() {
+	url="$1" output="$2"
+	case "$url" in "$REPOSITORY"/*|"$API") ;; *) return 1;; esac
+	# Limit an individual response even if a server omits Content-Length.
+	(
+		ulimit -f 50000 || exit 1
+		if [ "${connection:-direct}" = proxy ]; then
+			proxy_credentials || exit 1
+			{
+				if [ -n "$proxy_user" ]; then
+					printf 'proxy-user = "'; curl_config_string "$proxy_user"; printf ':'
+					curl_config_string "$proxy_pass"; printf '"\n'
+				fi
+			} | curl --config - --proxy "http://127.0.0.1:$proxy_port" --noproxy '' \
+				--fail --silent --location --proto '=https' --proto-redir '=https' \
+				--connect-timeout 6 --max-time 90 --max-filesize 25000000 -o "$output" "$url" 2>/dev/null
+		else
+			curl --noproxy '*' --fail --silent --location --proto '=https' --proto-redir '=https' \
+				--connect-timeout 6 --max-time 90 --max-filesize 25000000 -o "$output" "$url" 2>/dev/null
+		fi
+	) || { rm -f "$output"; return 1; }
+}
+manifest_contains() {
+	awk -v name="$2" '$2 == name && $1 ~ /^[0-9a-f]+$/ && length($1)==64 { n++; print $1 "  " $2 } END { if(n != 1) exit 1 }' "$1/SHA256SUMS" > "$1/checksum" || return 1
+	(cd "$1" && sha256sum -c checksum >/dev/null 2>&1)
+}
+package_names() {
+	version="$1"
+	case "$format" in
+	apk)
+		core="luci-theme-lumen-$version-r1.apk"
+		zh="luci-i18n-lumen-zh-cn-$version.apk"
+		fonts="luci-theme-lumen-fonts-$version-r1.apk" ;;
+	ipk)
+		core="luci-theme-lumen_${version}-r1_all.ipk"
+		zh="luci-i18n-lumen-zh-cn_${version}_all.ipk"
+		fonts="luci-theme-lumen-fonts_${version}-r1_all.ipk" ;;
+	esac
+}
+verify_set() {
+	dir="$1"
+	usign -V -q -p "$transaction/project-keys/lumen-usign.pub" -m "$dir/SHA256SUMS" -x "$dir/SHA256SUMS.sig" || return 1
+	manifest_contains "$dir" "$core" || return 1
+	[ "$with_zh" = no ] || manifest_contains "$dir" "$zh" || return 1
+	[ "$with_fonts" = no ] || manifest_contains "$dir" "$fonts" || return 1
+	buildinfo="BUILDINFO-openwrt-$firmware.json"
+	manifest_contains "$dir" "$buildinfo" || return 1
+	[ "$(json_value "$dir/$buildinfo" '@.openwrt_release')" = "$firmware" ] || return 1
+	[ "$(json_value "$dir/$buildinfo" '@.package_format')" = "$format" ] || return 1
+	if [ "$format" = apk ]; then
+		set -- "$dir/$core"
+		[ "$with_zh" = no ] || set -- "$@" "$dir/$zh"
+		[ "$with_fonts" = no ] || set -- "$@" "$dir/$fonts"
+		apk --keys-dir "$transaction/project-keys" verify "$@" >/dev/null 2>&1 || return 1
+	fi
+}
+download_set() {
+	dir="$1" version="$2"
+	package_names "$version"
+	mkdir -m 700 "$dir" || return 1
+	base="$REPOSITORY/v$version"
+	for item in SHA256SUMS SHA256SUMS.sig "BUILDINFO-openwrt-$firmware.json" "$core"; do
+		fetch "$base/$item" "$dir/$item" || return 1
+	done
+	[ "$with_zh" = no ] || fetch "$base/$zh" "$dir/$zh" || return 1
+	[ "$with_fonts" = no ] || fetch "$base/$fonts" "$dir/$fonts" || return 1
+	verify_set "$dir"
+}
+plan_only_lumen() {
+	awk '
+		/^\([0-9]+\/[0-9]+\)/ {
+			if ($2 !~ /^(Installing|Upgrading|Downgrading|Reinstalling)$/ ||
+			    ($3 != "luci-theme-lumen" && $3 != "luci-i18n-lumen-zh-cn" && $3 != "luci-theme-lumen-fonts")) bad=1
+		}
+		/^OK:/ {ok=1}
+		END {exit bad || !ok}
+	' "$1"
+}
+simulate_set() {
+	dir="$1" version="$2"
+	package_names "$version"
+	verify_set "$dir" || return 1
+	set -- "$dir/$core"
+	[ "$with_zh" = no ] || set -- "$@" "$dir/$zh"
+	[ "$with_fonts" = no ] || set -- "$@" "$dir/$fonts"
+	case "$format" in
+	apk)
+		apk --keys-dir "$transaction/install-keys" --network=no --cache=no --repositories-file /dev/null add --simulate "$@" > "$transaction/apk-plan" 2>/dev/null || return 1
+		plan_only_lumen "$transaction/apk-plan" ;;
+	ipk)
+		OPKG_CONF_DIR="$transaction/opkg-empty" opkg --conf "$transaction/opkg.conf" --force-downgrade --noaction install "$@" >/dev/null 2>&1 ;;
+	esac
+}
+install_set() {
+	dir="$1" version="$2"
+	simulate_set "$dir" "$version" || return 1
+	package_names "$version"
+	set -- "$dir/$core"
+	[ "$with_zh" = no ] || set -- "$@" "$dir/$zh"
+	[ "$with_fonts" = no ] || set -- "$@" "$dir/$fonts"
+	case "$format" in
+	apk)
+		# Do not download dependencies or trust this key outside this transaction.
+		apk --keys-dir "$transaction/install-keys" --network=no --cache=no --repositories-file /dev/null add "$@" >/dev/null 2>&1 ;;
+	ipk)
+		# No feed definitions or cache: dependencies must already be installed.
+		OPKG_CONF_DIR="$transaction/opkg-empty" opkg --conf "$transaction/opkg.conf" --force-downgrade install "$@" >/dev/null 2>&1 ;;
+	esac
+}
+
+read_transaction() {
+	run="$1"
+	valid_run "$run" || return 1
+	transaction="$STATE/$run"
+	[ -d "$transaction" ] && [ ! -L "$transaction" ] || return 1
+	installed=$(cat "$transaction/installed")
+	target=$(cat "$transaction/target")
+	format=$(cat "$transaction/format")
+	firmware=$(cat "$transaction/firmware")
+	with_zh=$(cat "$transaction/with_zh")
+	with_fonts=$(cat "$transaction/with_fonts")
+	valid_version "$installed" && valid_version "$target" && valid_version "$firmware" || return 1
+	case "$format:$with_zh:$with_fonts" in apk:yes:yes|apk:yes:no|apk:no:yes|apk:no:no|ipk:yes:yes|ipk:yes:no|ipk:no:yes|ipk:no:no) ;; *) return 1;; esac
+}
+recover() {
+	run="$1" side="$2"
+	read_transaction "$run" || return 1
+	case "$side" in old) version="$installed";; new) version="$target";; *) return 1;; esac
+	status rolling_back none "$installed" "$target"
+	if install_set "$transaction/$side" "$version"; then
+		rm -f "$STATE/pending"
+		status rolled_back none "$version" "$target"
+		return 0
+	fi
+	status error recovery "$installed" "$target"
+	return 1
+}
+boot_recover() {
+	[ -f "$STATE/pending" ] || return 0
+	read -r run side < "$STATE/pending" || return 1
+	recover "$run" "$side"
+}
+watchdog() {
+	watch_run="$1"
+	valid_run "$watch_run" || return 1
+	count=0
+	while [ "$count" -lt 66 ]; do
+		[ -f "$STATE/pending" ] || return 0
+		sleep 5
+		count=$((count+1))
+	done
+	# Do not run concurrently with a still-live package transaction.
+	lock || return 1
+	[ -f "$STATE/pending" ] || return 0
+	read -r pending_run pending_side < "$STATE/pending" || return 1
+	[ "$pending_run" = "$watch_run" ] || return 0
+	recover "$pending_run" "$pending_side"
+}
+start_watchdog() {
+	# It survives rpcd/worker exit, but must not inherit the worker's lock.
+	setsid "$STATE/recovery.sh" watchdog "$run" </dev/null >/dev/null 2>&1 9>&- &
+	guard_pid=$!
+	kill -0 "$guard_pid" 2>/dev/null
+}
+fail() {
+	status error "$1" "${installed:-}" "${target:-}"
+	if [ ! -f "$STATE/pending" ] && valid_run "${run:-}"; then rm -rf "$STATE/$run"; fi
+	exit 1
+}
+worker() {
+	installed= target=
+	status checking none
+	for cmd in curl usign jsonfilter sha256sum uci ubus flock setsid awk sed; do
+		command -v "$cmd" >/dev/null 2>&1 || fail runtime
+	done
+	installed_info || fail metadata
+	case "$format" in apk) command -v apk >/dev/null || fail runtime;; ipk) command -v opkg >/dev/null || fail runtime;; esac
+	installed_package_is luci-theme-lumen "$installed-r1" || fail unsupported
+	with_zh=no; with_fonts=no
+	if package_installed luci-i18n-lumen-zh-cn; then
+		installed_package_is luci-i18n-lumen-zh-cn "$installed" || fail unsupported
+		with_zh=yes
+	fi
+	if package_installed luci-theme-lumen-fonts; then
+		installed_package_is luci-theme-lumen-fonts "$installed-r1" || fail unsupported
+		with_fonts=yes
+	fi
+	available=$(df -Pk "$STATE" | awk 'NR==2 {print $4}')
+	case "$available" in ''|*[!0-9]*) fail disk;; esac
+	needed=4096; tmp_needed=1024
+	[ "$with_fonts" = no ] || { needed=24000; tmp_needed=8000; }
+	[ "$available" -ge "$needed" ] || fail disk
+	tmp_available=$(df -Pk /tmp | awk 'NR==2 {print $4}')
+	case "$tmp_available" in ''|*[!0-9]*) fail disk;; esac
+	[ "$tmp_available" -ge "$tmp_needed" ] || fail disk
+	run="run-$(date +%s)-$$"; valid_run "$run" || fail runtime
+	transaction="$STATE/$run"
+	mkdir -m 700 "$transaction" "$transaction/project-keys" "$transaction/install-keys" || fail disk
+	cp "$ASSETS/keys/lumen-apk.pub" "$ASSETS/keys/lumen-usign.pub" "$transaction/project-keys/" || fail runtime
+	cp "$transaction/project-keys/lumen-apk.pub" "$transaction/install-keys/" || fail runtime
+	if [ "$format" = ipk ]; then
+		mkdir -m 700 "$transaction/opkg-empty" "$transaction/opkg-lists" || fail runtime
+		{
+			printf 'dest root /\ndest ram /tmp\nlists_dir ext %s/opkg-lists\n' "$transaction"
+			[ ! -r /etc/opkg.conf ] || awk '$1 == "option" && $2 == "overlay_root" && $3 ~ /^\/[A-Za-z0-9_/.+-]+$/ {print}' /etc/opkg.conf
+			opkg print-architecture | awk '/^arch [A-Za-z0-9_+-]+ [0-9]+$/ {print}'
+		} > "$transaction/opkg.conf" || fail runtime
+	fi
+	connection=direct
+	if ! fetch "$API" "$transaction/latest.json"; then
+		connection=proxy
+		fetch "$API" "$transaction/latest.json" || fail network
+	fi
+	[ "$(json_value "$transaction/latest.json" '@.draft')" = false ] || fail metadata
+	[ "$(json_value "$transaction/latest.json" '@.prerelease')" = false ] || fail metadata
+	tag=$(json_value "$transaction/latest.json" '@.tag_name')
+	case "$tag" in v*) target=${tag#v};; *) fail metadata;; esac
+	valid_version "$target" || fail metadata
+	if ! newer_than "$target" "$installed"; then
+		status current none "$installed" "$target"
+		rm -rf "$transaction"
+		return 0
+	fi
+	printf '%s\n' "$installed" > "$transaction/installed"
+	printf '%s\n' "$target" > "$transaction/target"
+	printf '%s\n' "$format" > "$transaction/format"
+	printf '%s\n' "$firmware" > "$transaction/firmware"
+	printf '%s\n' "$with_zh" > "$transaction/with_zh"
+	printf '%s\n' "$with_fonts" > "$transaction/with_fonts"
+	status downloading none "$installed" "$target"
+	download_set "$transaction/old" "$installed" || fail old_release
+	download_set "$transaction/new" "$target" || fail new_release
+	# Check both transaction plans before arming recovery or changing packages.
+	simulate_set "$transaction/old" "$installed" || fail old_release
+	simulate_set "$transaction/new" "$target" || fail new_release
+	# Install the recovery hook before changing any package. The copied worker and
+	# project keys remain available even if the theme package is interrupted.
+	cp /usr/libexec/lumen-update "$STATE/recovery.sh" || fail recovery
+	chmod 700 "$STATE/recovery.sh" || fail recovery
+	cp "$ASSETS/recovery-init" /etc/init.d/lumen-update-recovery || fail recovery
+	chmod 755 /etc/init.d/lumen-update-recovery || fail recovery
+	/etc/init.d/lumen-update-recovery enable || fail recovery
+	printf '%s old\n' "$run" > "$STATE/pending.tmp" && mv "$STATE/pending.tmp" "$STATE/pending" || fail recovery
+	if ! start_watchdog; then rm -f "$STATE/pending"; fail recovery; fi
+	sync
+	status installing none "$installed" "$target"
+	if ! install_set "$transaction/new" "$target"; then
+		recover "$run" old || :
+		return 1
+	fi
+	status waiting none "$installed" "$target"
+	# A reachable browser must load the new resources and confirm. Otherwise the
+	# independently installed, signed previous release is restored after 5 min.
+	count=0
+	while [ "$count" -lt 150 ]; do
+		if [ -f "$transaction/confirmed" ]; then
+			previous=$(cat "$STATE/current" 2>/dev/null || :)
+			printf '%s\n' "$run" > "$STATE/current.tmp" && mv "$STATE/current.tmp" "$STATE/current" || { recover "$run" old; return 1; }
+			rm -f "$STATE/pending"
+			status success none "$installed" "$target"
+			if valid_run "$previous" && [ "$previous" != "$run" ]; then rm -rf "$STATE/$previous"; fi
+			return 0
+		fi
+		sleep 2
+		count=$((count+1))
+	done
+	recover "$run" old
+}
+manual_rollback() {
+	[ -f "$STATE/current" ] || { status error no_backup; return 1; }
+	run=$(cat "$STATE/current")
+	read_transaction "$run" || { status error recovery; return 1; }
+	# If the rollback is interrupted, the boot hook restores the current release.
+	printf '%s new\n' "$run" > "$STATE/pending.tmp" && mv "$STATE/pending.tmp" "$STATE/pending" || { status error recovery; return 1; }
+	if ! start_watchdog; then rm -f "$STATE/pending"; status error recovery; return 1; fi
+	sync
+	if recover "$run" old; then
+		rm -f "$STATE/current"
+		return 0
+	fi
+	if recover "$run" new; then
+		status error rollback_failed "$target" "$target"
+	fi
+	return 1
+}
+case "${1:-}" in
+status)
+	if [ -f "$STATE/status.json" ]; then cat "$STATE/status.json"; else respond idle; fi ;;
+start|rollback)
+	init_dirs || { respond error runtime; exit 1; }
+	lock || { respond error busy; exit 1; }
+	[ ! -f "$STATE/pending" ] || { respond error pending; exit 1; }
+	if [ "$1" = rollback ] && [ ! -f "$STATE/current" ]; then respond error no_backup; exit 1; fi
+	if [ "$1" = start ]; then operation=worker; status starting; else operation=manual-rollback; status rolling_back; fi
+	setsid /usr/libexec/lumen-update "$operation" </dev/null >/dev/null 2>&1 &
+	respond started ;;
+confirm)
+	[ -f "$STATE/pending" ] || { respond error pending; exit 1; }
+	read -r run side < "$STATE/pending" || { respond error pending; exit 1; }
+	[ "$side" = old ] && read_transaction "$run" || { respond error pending; exit 1; }
+	[ "$(json_value "$STATE/status.json" '@.state')" = waiting ] || { respond error pending; exit 1; }
+	[ "$(json_value /www/luci-static/resources/lumen/version.json '@.version')" = "$target" ] || { respond error metadata; exit 1; }
+	installed_package_is luci-theme-lumen "$target-r1" || { respond error metadata; exit 1; }
+	: > "$transaction/confirmed" || { respond error runtime; exit 1; }
+	respond confirmed ;;
+worker) worker ;;
+manual-rollback) manual_rollback ;;
+boot-recover) init_dirs && lock && boot_recover ;;
+watchdog) [ "$#" = 2 ] && init_dirs && watchdog "$2" ;;
+*) respond error unavailable; exit 1 ;;
+esac

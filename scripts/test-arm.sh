@@ -16,7 +16,9 @@ esac
 
 work="$(mktemp -d)"
 image="lumen-install-test:${release}-${arch}"
-trap 'docker image rm "$image" >/dev/null 2>&1 || true; rm -rf -- "$work"' EXIT
+prepared="lumen-install-test:${release}-${arch}-deps"
+container=''
+trap '[[ -z "$container" ]] || docker rm -f "$container" >/dev/null 2>&1 || true; docker image rm "$prepared" "$image" >/dev/null 2>&1 || true; rm -rf -- "$work"' EXIT
 base="https://downloads.openwrt.org/releases/$release/targets/$target/$subtype"
 rootfs="openwrt-${release}-${target}-${subtype}-rootfs.tar.gz"
 mkdir -m 700 "$work/gnupg"
@@ -38,7 +40,20 @@ download "$base/$rootfs" "$work/$rootfs"
 )
 
 docker import --platform "$platform" "$work/$rootfs" "$image" >/dev/null
+# The stock images include usign, flock and rpcd-mod-ucode but not curl.
+# Install the normal, officially signed runtime dependency using the feeds
+# shipped in the authenticated rootfs; all theme tests below remain offline.
+if [[ "$format" == apk ]]; then
+  prepare='apk update && apk add curl'
+else
+  prepare='opkg update && opkg install curl'
+fi
+container="$(docker create --platform "$platform" --memory 128m --memory-swap 128m "$image" /bin/sh -c "$prepare")"
+docker start -a "$container"
+docker commit "$container" "$prepared" >/dev/null
+docker rm "$container" >/dev/null
+container=''
 docker run --rm --platform "$platform" --network none --memory 128m --memory-swap 128m \
   --mount "type=bind,src=$fixtures,dst=/fixtures,readonly" \
   --mount "type=bind,src=$(realpath scripts/test-arm-container.sh),dst=/test-arm.sh,readonly" \
-  "$image" /bin/sh /test-arm.sh "$format" "$arch"
+  "$prepared" /bin/sh /test-arm.sh "$format" "$arch"
