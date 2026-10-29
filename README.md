@@ -6,7 +6,7 @@
 
 一个面向现代 OpenWrt LuCI 的轻量界面主题：清晰的侧栏、明暗配色、实时仪表盘，以及适合窄窗口和手机的布局。
 
-> 开发中的 1.0.2 源码将自带字体拆为可选包，以减小主题主体的安装占用。构建和安装验证以对应 GitHub Actions 记录为准；下文的 v1.0.1 记录只适用于已发布的旧版本。详见[轻量化开发说明](docs/FONT-PACKAGING.md)。
+> v1.0.2 将自带字体拆为可选包，默认使用浏览设备的系统字体；主题主体的 APK 和 IPK 均约 77 KiB。详见[轻量化说明](docs/FONT-PACKAGING.md)。
 
 [English](README.en.md) · [Releases](https://github.com/qidlek114/luci-theme-lumen/releases) · [问题反馈](https://github.com/qidlek114/luci-theme-lumen/issues) · [参与贡献](CONTRIBUTING.md)
 
@@ -31,22 +31,20 @@
 
 ## 兼容范围
 
-v1.0.1 面向 **ucode LuCI**，目标构建环境是 OpenWrt 25.12.6 SDK（APK，`noarch`）和 24.10.8 SDK（IPK，`all`）。架构无关不代表兼容所有固件；软件包格式与 LuCI 运行环境仍须匹配。依赖 `luci-base`、`luci-mod-status` 和作为卸载回退的 `luci-theme-bootstrap`，不依赖代理、Docker、广告过滤或任何特定硬件。它保留原生 LuCI 页面，自带页面全部位于 `admin/lumen/` 下。
+v1.0.2 面向 **ucode LuCI**，目标构建环境是 OpenWrt 25.12.6 SDK（APK，`noarch`）和 24.10.8 SDK（IPK，`all`）。架构无关不代表兼容所有固件；软件包格式与 LuCI 运行环境仍须匹配。依赖 `luci-base`、`luci-mod-status` 和作为卸载回退的 `luci-theme-bootstrap`。它保留原生 LuCI 页面，自带页面位于 `admin/lumen/` 下。
 
-两个 SDK 构建均已成功；两个格式的 235 个运行时文件完成源码对应检查，168 条中文翻译完成核对。OpenWrt 24.10.8 的 IPK 和 25.12.6 的 APK 隔离验证均已覆盖签名校验安装、从旧版本测试包升级并保留 UCI 配置，以及卸载检查；IPK 另已验证启用、外观／主题选择保留和当前／非当前主题的卸载回退。APK 原生验签通过，无信任密钥及内容篡改的负面对照均被拒绝。源码与更新行为测试、Chromium 320／390／1280 px 明暗演示布局检查也已通过。
+安装、升级和卸载在隔离的 ARMv7、ARMv8 和 x86_64 OpenWrt 环境中验证；ARMv7 使用模拟执行。详细范围、签名与构建来源见 [v1.0.2 验证记录](docs/VALIDATION-v1.0.2.md)，旧版记录见 [v1.0.1 验证记录](docs/VALIDATION.md)。主路由仅应用了网络唤醒页面的样式修复，**没有安装完整新版包，也没有进行实机启动或重启验收**。旧 Lua LuCI、厂商定制页面及其他固件版本不在已验证范围内。
 
-OpenWrt 25.12.6 真机仅部署了更新页相关的 5 个界面文件，已在真实浏览器确认中文界面和手动 GitHub 查询，代理保持原状态。**真机没有执行完整发布包安装，隔离环境和真机均没有执行完整启动或重启验收。** 这些结果不代表全部固件和浏览器兼容，也不承诺二进制可复现构建。详细范围、构建来源与限制见[验证记录](docs/VALIDATION.md)。旧 Lua LuCI 不适用；厂商定制页面及未来 LuCI 版本不在已验证范围内。
-
-已发布的 v1.0.1 随主题安装约 6.53 MB 的字体文件（未压缩），另有脚本、样式和模板，请为包及升级留出足够空间。开发中的字体拆包见上方说明。
+对比 v1.0.1 约 6.37 MiB 的 APK 主题包，v1.0.2 签名后的 APK 主体约 77 KiB，下载体积减少约 98.8%；IPK 主体也约 77 KiB。自带字体需另装约 6.3 MiB 的字体包，安装后仍占用相应空间。请为包及升级留出足够空间。
 
 ## 从源码构建
 
-使用与目标设备固件匹配的 OpenWrt SDK 或源码树，并按其官方文档准备编译环境。v1.0.1 的目标 SDK 为 25.12.6 和 24.10.8。以下操作在 **SDK／源码树根目录** 执行：
+使用与目标设备固件匹配的 OpenWrt SDK 或源码树，并按其官方文档准备编译环境。v1.0.2 的目标 SDK 为 25.12.6 和 24.10.8。以下操作在 **SDK／源码树根目录** 执行：
 
 ```sh
 ./scripts/feeds update -a
 ./scripts/feeds install -a
-git clone --branch v1.0.1 --depth 1 https://github.com/qidlek114/luci-theme-lumen.git package/luci-theme-lumen
+git clone --branch v1.0.2 --depth 1 https://github.com/qidlek114/luci-theme-lumen.git package/luci-theme-lumen
 make menuconfig
 make package/luci-theme-lumen/compile V=s
 ```
@@ -54,6 +52,7 @@ make package/luci-theme-lumen/compile V=s
 在 `menuconfig` 中选择 `LuCI → Themes → luci-theme-lumen`；如需中文，同时启用 LuCI 的简体中文翻译。标准 `luci.mk` 会生成：
 
 - `luci-theme-lumen`：主题本体。
+- `luci-theme-lumen-fonts`：可选的自带字体。
 - `luci-i18n-lumen-zh-cn`：中文翻译，安装到 `lumen.zh-cn.lmo`。
 
 生成的包位于 SDK 的 `bin/packages/` 子目录。主题是架构无关资源，但仍需使用匹配目标系统的软件包格式和 LuCI API。**源码 ZIP／tar.gz 不能当作 APK 或 IPK 安装。** 可安装包是否已经发布及其验收范围，以对应 Release 的资产和验证说明为准；v1.0.0 仍是仅源码发布。
@@ -61,7 +60,7 @@ make package/luci-theme-lumen/compile V=s
 ## 安装与启用
 
 1. 保留可用的原主题，并记录当前主题。先在备用设备或可恢复的测试环境验证。
-2. 从对应 [Release](https://github.com/qidlek114/luci-theme-lumen/releases) 获取匹配的主题和可选中文包，先按[安装与签名验证说明](docs/INSTALL.md)核对公钥和软件包。APK 使用项目密钥原生签名；IPK 先验证 usign 签名的摘要清单，再核对包内容。SHA-256 单独不能证明发布者身份。不要关闭 HTTPS 证书或软件包签名校验。
+2. 从对应 [Release](https://github.com/qidlek114/luci-theme-lumen/releases) 获取匹配的主题和可选中文包。v1.0.2 更换了签名公钥，先按[新版安装与换钥说明](docs/INSTALL-v1.0.2.md)核对公钥和软件包；[v1.0.1 说明](docs/INSTALL.md)保留旧公钥。APK 使用项目密钥原生签名；IPK 先验证 usign 签名的摘要清单，再核对包内容。SHA-256 单独不能证明发布者身份。不要关闭 HTTPS 证书或软件包签名校验。
 3. 安装沿用 LuCI 标准生命周期，可能清理 LuCI 缓存并重载 `rpcd` 以加载权限；它不重启网络、防火墙或代理服务。重新登录即可刷新会话和菜单。
 4. 在 **系统 → 系统 → 语言和界面** 中手动选择 **Lumen**。安装脚本只登记主题，不自动切换当前主题。
 5. 在 **Lumen → 外观** 调整配色和界面名称；在 **Lumen → 仪表盘／实时图表** 查看数据。

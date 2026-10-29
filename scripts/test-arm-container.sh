@@ -18,6 +18,18 @@ snapshot() {
 }
 snapshot > /tmp/network-before
 
+# Release validation uses the final signed files, not the temporary test keys.
+# The host runner also matches both public keys against the checked-in copies.
+if [ -d /fixtures/final-release ]; then
+  (cd /fixtures/final-release && sha256sum -c SHA256SUMS)
+  if [ "$format" = ipk ]; then
+    (cd /fixtures/final-release && usign -V -p lumen-usign.pub -m SHA256SUMS -x SHA256SUMS.sig)
+    if usign -V -p /fixtures/old/lumen-usign.pub -m /fixtures/final-release/SHA256SUMS -x /fixtures/final-release/SHA256SUMS.sig; then
+      echo 'The previous usign key unexpectedly accepted the new release.' >&2; exit 1
+    fi
+  fi
+fi
+
 if [ "$format" = apk ]; then
   old_theme=/fixtures/old/luci-theme-lumen-1.0.1-r1.apk
   old_zh=/fixtures/old/luci-i18n-lumen-zh-cn-1.0.1.apk
@@ -30,6 +42,9 @@ if [ "$format" = apk ]; then
   cp /fixtures/test-keys/lumen-test.pub /tmp/test-keys/
   apk --keys-dir /tmp/old-keys verify "$old_theme" "$old_zh"
   apk --keys-dir /tmp/test-keys verify "$new_theme" "$new_fonts" "$new_zh"
+  if [ -d /fixtures/final-release ] && apk --keys-dir /tmp/old-keys verify "$new_theme"; then
+    echo 'The previous APK key unexpectedly accepted the new release.' >&2; exit 1
+  fi
   if apk --keys-dir /tmp/empty-keys verify "$new_theme"; then
     echo 'Unsigned trust-directory negative check unexpectedly passed.' >&2; exit 1
   fi
