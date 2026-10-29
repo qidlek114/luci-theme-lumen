@@ -303,7 +303,7 @@ return view.extend({
 				textNode('h3', {}, _('Downloads for %s (%s)').format(selected.tag, this.installed.format.toUpperCase())),
 				textNode('p', {}, _('The package format matches this installation. Check the target release’s firmware and LuCI requirements before installing.')),
 				textNode('p', {}, _('Verify the signing key and package signatures before installing. A checksum alone does not authenticate the publisher.')),
-				textNode('p', {}, _('Download the files, then confirm installation in the LuCI package manager. This page does not install them.'))
+				textNode('p', {}, _('These download links are for manual installation. For the latest compatible release, use the automatic update button above.'))
 			];
 			if (!assets.some((asset) => asset.kind === 'theme'))
 				content.push(textNode('p', { 'class': 'alert-message warning' }, _('This release has no theme package matching the installed package format.')));

@@ -676,8 +676,8 @@ msgid "Verify the signing key and package signatures before installing. A checks
 msgstr "安装前请核对公钥并验证签名。仅凭哈希校验不能证明发布者身份。"
 
 #: htdocs/luci-static/resources/view/lumen/updates.js
-msgid "Download the files, then confirm installation in the LuCI package manager. This page does not install them."
-msgstr "下载文件后，由你在 LuCI 软件包管理页确认安装；本页不会代为安装。"
+msgid "These download links are for manual installation. For the latest compatible release, use the automatic update button above."
+msgstr "这些下载链接用于手动安装。如需安装兼容的最新版本，请使用上方的自动更新按钮。"
 
 #: htdocs/luci-static/resources/view/lumen/updates.js
 msgid "This release has no theme package matching the installed package format."

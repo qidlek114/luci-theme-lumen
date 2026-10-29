@@ -67,7 +67,9 @@ while [ "$#" -gt 0 ]; do
  case "$1" in --noproxy) shift; [ "$1" != '*' ] || direct=yes;; -o) shift; out="$1";; https://*) url="$1";; esac
  shift
 done
-[ "$direct" != yes ] || exit 1
+if [ "$direct" = yes ]; then
+ case "${scenario}:$url" in direct-api-only:*/releases/latest) ;; *) exit 1;; esac
+fi
 cat >/dev/null
 case "$url" in */releases/latest) cp '${dir}/latest.json' "$out";;
  */releases/download/*) tail="\x24{url#*/releases/download/}"; cp '${releases}/'"$tail" "$out";; *) exit 1;; esac
@@ -99,7 +101,17 @@ case " $* " in *' --noaction '*) exit 0;; *' install '*) ${doInstall};; esac
 `);
  executable(path.join(bin,'flock'),'#!/bin/sh\nexit 0\n');
  executable(path.join(bin,'setsid'),'#!/bin/sh\nexec "$@"\n');
- executable(path.join(bin,'sleep'),'#!/bin/sh\ncase "$1" in 2) /bin/sleep 0.002;; 5) /bin/sleep 0.005;; esac\n');
+ // Gate the two clocks independently so a fast CI host cannot run the
+ // watchdog before the test has observed the worker's waiting state.
+ executable(path.join(bin,'sleep'),`#!/bin/sh
+ case "$1" in
+  2) if [ '${scenario}' = timeout ]; then /bin/sleep 0.002; else
+      while [ ! -f '${dir}/worker-go' ] && [ -f '${state}/pending' ]; do /bin/sleep 0.01; done
+     fi;;
+  5) while [ ! -f '${dir}/watchdog-go' ] && [ -f '${state}/pending' ]; do /bin/sleep 0.01; done
+     /bin/sleep 0.002;;
+ esac
+ `);
  executable(path.join(bin,'sync'),'#!/bin/sh\nexit 0\n');
  return { dir, state, data, script };
 }
@@ -142,10 +154,19 @@ async function main(){
    const h=makeHarness(format,'success'), process=await runWorker(h);
    await awaitState(h,s=>s.state==='waiting'); assert.equal(installed(h),'1.0.3');
    const result=invoke(h,'confirm');assert.equal(result.status,0,result.stderr);assert.equal(JSON.parse(result.stdout).state,'confirmed');
+   fs.writeFileSync(path.join(h.dir,'worker-go'),'');
    assert.equal((await process.done).code,0);assert.equal((await awaitState(h,s=>s.state==='success')).target,'1.0.3');
    assert(fs.existsSync(path.join(h.state,'current')));assert(!fs.existsSync(path.join(h.state,'pending')));
    const rollback=invoke(h,'manual-rollback');assert.equal(rollback.status,0,rollback.stderr);assert.equal(installed(h),'1.0.2');
    assert.equal((await awaitState(h,s=>s.state==='rolled_back')).installed,'1.0.2');
+  }
+  if (format === 'apk') {
+   const h=makeHarness(format,'direct-api-only'), process=await runWorker(h);
+   await awaitState(h,s=>s.state==='waiting');
+   const result=invoke(h,'confirm');assert.equal(result.status,0,result.stderr);
+   fs.writeFileSync(path.join(h.dir,'worker-go'),'');assert.equal((await process.done).code,0);
+   const args=fs.readFileSync(path.join(h.dir,'curl-args'),'utf8');
+   assert(args.includes('--noproxy *') && args.includes('--proxy'));
   }
   {
    const h=makeHarness(format,'install-fail'), process=await runWorker(h), result=await process.done;
@@ -161,13 +182,15 @@ async function main(){
   }
   {
    const h=makeHarness(format,'worker-crash'), process=await runWorker(h);
-   await awaitState(h,s=>s.state==='waiting');process.child.kill('SIGKILL');await process.done;
+   await awaitState(h,s=>s.state==='waiting');process.child.kill('SIGKILL');
+   fs.writeFileSync(path.join(h.dir,'worker-go'),'');fs.writeFileSync(path.join(h.dir,'watchdog-go'),'');await process.done;
    await awaitState(h,s=>s.state==='rolled_back');
    assert.equal(installed(h),'1.0.2');assert(!fs.existsSync(path.join(h.state,'pending')));
   }
   {
    const h=makeHarness(format,'power-loss'), process=await runWorker(h);
-   await awaitState(h,s=>s.state==='waiting');process.child.kill('SIGKILL');await process.done;
+   await awaitState(h,s=>s.state==='waiting');process.child.kill('SIGKILL');
+   fs.writeFileSync(path.join(h.dir,'worker-go'),'');await process.done;
    assert(fs.existsSync(path.join(h.state,'pending')));assert.equal(installed(h),'1.0.3');
    const recovery=invoke(h,'boot-recover');assert.equal(recovery.status,0,recovery.stderr);
    assert.equal(installed(h),'1.0.2');assert(!fs.existsSync(path.join(h.state,'pending')));

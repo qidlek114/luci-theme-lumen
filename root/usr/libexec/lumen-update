@@ -85,7 +85,7 @@ proxy_credentials() {
 		index=$((index+1))
 	done
 }
-fetch() {
+fetch_once() {
 	url="$1" output="$2"
 	case "$url" in "$REPOSITORY"/*|"$API") ;; *) return 1;; esac
 	# Limit an individual response even if a server omits Content-Length.
@@ -106,6 +106,12 @@ fetch() {
 				--connect-timeout 6 --max-time 90 --max-filesize 25000000 -o "$output" "$url" 2>/dev/null
 		fi
 	) || { rm -f "$output"; return 1; }
+}
+fetch() {
+	if fetch_once "$@"; then return 0; fi
+	[ "${connection:-direct}" = direct ] || return 1
+	connection=proxy
+	fetch_once "$@"
 }
 manifest_contains() {
 	awk -v name="$2" '$2 == name && $1 ~ /^[0-9a-f]+$/ && length($1)==64 { n++; print $1 "  " $2 } END { if(n != 1) exit 1 }' "$1/SHA256SUMS" > "$1/checksum" || return 1
@@ -294,10 +300,7 @@ worker() {
 		} > "$transaction/opkg.conf" || fail runtime
 	fi
 	connection=direct
-	if ! fetch "$API" "$transaction/latest.json"; then
-		connection=proxy
-		fetch "$API" "$transaction/latest.json" || fail network
-	fi
+	fetch "$API" "$transaction/latest.json" || fail network
 	[ "$(json_value "$transaction/latest.json" '@.draft')" = false ] || fail metadata
 	[ "$(json_value "$transaction/latest.json" '@.prerelease')" = false ] || fail metadata
 	tag=$(json_value "$transaction/latest.json" '@.tag_name')
