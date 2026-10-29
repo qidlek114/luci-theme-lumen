@@ -76,7 +76,7 @@ prepare_rescue() {
 		mkdir -m 700 "$staged" "$staged/keys" "$staged/rescue" || return 1
 		cp "$ASSETS/keys/lumen-apk.pub" "$ASSETS/keys/lumen-usign.pub" "$staged/keys/" &&
 		cp "$ASSETS/recovery-init" "$staged/" &&
-		cp "$ASSETS/rescue/menu.json" "$ASSETS/rescue/acl.json" "$ASSETS/rescue/lumen.recovery" "$ASSETS/rescue/view.js" "$staged/rescue/" || {
+		cp "$ASSETS/rescue/menu.json" "$ASSETS/rescue/acl.json" "$ASSETS/rescue/lumen.recovery" "$ASSETS/rescue/view.js" "$ASSETS/rescue/session-access.uc" "$staged/rescue/" || {
 			rm -rf "$staged"; return 1;
 		}
 		[ ! -L "$STATE/rescue-assets" ] || { rm -rf "$staged"; return 1; }
@@ -98,12 +98,22 @@ prepare_rescue() {
 	rescue_file "$rescue_source/acl.json" "$RESCUE_ACL" 644 &&
 	rescue_file "$rescue_source/lumen.recovery" "$RESCUE_RPC" 755 &&
 	rescue_file "$rescue_source/view.js" "$RESCUE_VIEW" 644 || return 1
-	# rpcd loads ucode providers at startup. Restart only if this small bridge is
-	# new or changed, and do so before changing the installed theme.
+	# rpcd loads ucode providers at startup. Reload only if this small bridge is
+	# new or changed; unlike a restart, reload preserves existing sessions.
 	if [ "$changed" = yes ] || ! ubus -S list lumen.recovery >/dev/null 2>&1; then
-		/etc/init.d/rpcd restart >/dev/null 2>&1 || return 1
+		/etc/init.d/rpcd reload >/dev/null 2>&1 || return 1
 	fi
-	ubus -S list lumen.recovery >/dev/null 2>&1 || return 1
+	# The init script can return before rpcd has registered its ucode objects.
+	# Wait briefly for the fixed bridge instead of treating startup as a failure.
+	rpc_attempts=0
+	while ! ubus -S list lumen.recovery >/dev/null 2>&1; do
+		[ "$rpc_attempts" -lt 10 ] || return 1
+		sleep 1
+		rpc_attempts=$((rpc_attempts+1))
+	done
+	# Existing sessions were created before the new ACL existed. Copy only
+	# permissions they already have for the normal updater to the bridge.
+	ucode "$rescue_source/session-access.uc" >/dev/null 2>&1 || return 1
 	rescue_file "$rescue_source/menu.json" "$RESCUE_MENU" 644 || return 1
 	: > "$STATE/rescue-installed"
 }
@@ -331,7 +341,7 @@ fail() {
 worker() {
 	installed= target=
 	status checking none
-	for cmd in curl usign jsonfilter sha256sum uci ubus flock setsid awk sed cmp; do
+	for cmd in curl usign jsonfilter sha256sum uci ubus ucode flock setsid awk sed cmp; do
 		command -v "$cmd" >/dev/null 2>&1 || fail runtime
 	done
 	installed_info || fail metadata

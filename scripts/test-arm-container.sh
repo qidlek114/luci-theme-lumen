@@ -92,6 +92,7 @@ fi
 ucode -T -c /usr/share/ucode/luci/template/themes/lumen/header.ut > /tmp/lumen-header.uc
 ucode -c /usr/share/rpcd/ucode/lumen.update > /tmp/lumen-rpc.uc
 ucode -c /usr/share/lumen-update/rescue/lumen.recovery > /tmp/lumen-rescue-rpc.uc
+ucode -c /usr/share/lumen-update/rescue/session-access.uc > /tmp/lumen-rescue-session.uc
 test -s /usr/share/lumen-update/rescue/view.js
 test -s /usr/share/lumen-update/rescue/menu.json
 test -s /usr/share/lumen-update/rescue/acl.json

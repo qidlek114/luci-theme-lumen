@@ -23,7 +23,7 @@ function makeHarness(format, scenario) {
  fs.writeFileSync(path.join(assets,'keys/lumen-apk.pub'), 'public key');
  fs.writeFileSync(path.join(assets,'keys/lumen-usign.pub'), 'public key');
  executable(path.join(assets, 'recovery-init'), '#!/bin/sh\nexit 0\n');
- for (const name of ['menu.json','acl.json','lumen.recovery','view.js'])
+ for (const name of ['menu.json','acl.json','lumen.recovery','view.js','session-access.uc'])
   fs.copyFileSync(path.join(root,'root/usr/share/lumen-update/rescue',name),path.join(assets,'rescue',name));
  fs.writeFileSync(path.join(dir, 'latest.json'), JSON.stringify({ draft:false, prerelease:false, tag_name:'v'+(scenario==='current'?'1.0.2':'1.0.3') }));
  for (const version of ['1.0.2','1.0.3']) {
@@ -61,7 +61,20 @@ try:
  print(str(data).lower() if isinstance(data,bool) else data)
 except Exception: sys.exit(1)
 `);
- executable(path.join(bin,'ubus'),`#!/bin/sh\nprintf '%s\\n' '{"release":{"version":"${format==='apk'?'25.12.6':'24.10.8'}"}}'\n`);
+ executable(path.join(bin,'ubus'),`#!/bin/sh
+case "$*" in
+ '-S list lumen.recovery')
+  case '${scenario}' in
+   rpc-never) exit 1;;
+   rpc-delayed)
+    n=$(cat '${dir}/rpc-attempts' 2>/dev/null || echo 0)
+    n=$((n+1)); printf '%s\\n' "$n" > '${dir}/rpc-attempts'
+    [ "$n" -ge 3 ] || exit 1;;
+  esac
+  echo lumen.recovery;;
+ *) printf '%s\\n' '{"release":{"version":"${format==='apk'?'25.12.6':'24.10.8'}"}}';;
+esac
+`);
  executable(path.join(bin,'uci'),`#!/bin/sh
 case "$*" in
  *openclash.config.enable*) echo 1;; *openclash.config.http_port*) echo 7890;;
@@ -108,6 +121,7 @@ esac
 case " $* " in *' --noaction '*) exit 0;; *' install '*) ${doInstall};; esac
 `);
  executable(path.join(bin,'flock'),'#!/bin/sh\nexit 0\n');
+ executable(path.join(bin,'ucode'),'#!/bin/sh\nexit 0\n');
  executable(path.join(bin,'setsid'),'#!/bin/sh\nexec "$@"\n');
  // Gate the two clocks independently so a fast CI host cannot run the
  // watchdog before the test has observed the worker's waiting state.
@@ -123,13 +137,14 @@ case " $* " in *' --noaction '*) exit 0;; *' install '*) ${doInstall};; esac
  executable(path.join(bin,'sync'),'#!/bin/sh\nexit 0\n');
  return { dir, state, data, script };
 }
-async function awaitState(h, predicate, timeout=6000) {
+async function awaitState(h, predicate, timeout=20000) {
  const end=Date.now()+timeout;
+ let lastStatus;
  while(Date.now()<end) {
-  try { const status=JSON.parse(fs.readFileSync(path.join(h.state,'status.json'),'utf8')); if(predicate(status)) return status; } catch(e) {}
+  try { const status=JSON.parse(fs.readFileSync(path.join(h.state,'status.json'),'utf8')); lastStatus=status; if(predicate(status)) return status; } catch(e) {}
   await wait(10);
  }
- throw new Error('Timed out waiting for updater state');
+ throw new Error('Timed out waiting for updater state; last state: '+JSON.stringify(lastStatus));
 }
 function invoke(h, action) { return spawnSync('/bin/sh',[h.script,action],{encoding:'utf8'}); }
 async function runWorker(h, script=h.script) {
@@ -157,6 +172,18 @@ async function main(){
    const h=makeHarness(format,'unrelated-plan'), process=await runWorker(h), result=await process.done;
    assert.notEqual(result.code,0);assert.equal((await awaitState(h,s=>s.state==='error')).code,'new_release');
    assert.equal(log(h),'');assert(!fs.existsSync(path.join(h.state,'pending')));
+  }
+  if (format === 'apk') {
+   const h=makeHarness(format,'rpc-delayed'), process=await runWorker(h);
+   await awaitState(h,s=>s.state==='waiting');
+   assert(Number(fs.readFileSync(path.join(h.dir,'rpc-attempts'),'utf8')) >= 3, 'Retry until the retained RPC bridge registers');
+   const result=invoke(h,'confirm');assert.equal(result.status,0,result.stderr);
+   fs.writeFileSync(path.join(h.dir,'worker-go'),'');assert.equal((await process.done).code,0);
+  }
+  if (format === 'apk') {
+   const h=makeHarness(format,'rpc-never'), process=await runWorker(h), result=await process.done;
+   assert.notEqual(result.code,0);assert.equal((await awaitState(h,s=>s.state==='error')).code,'recovery');
+   assert.equal(installed(h),'1.0.2');assert.equal(log(h),'');assert(!fs.existsSync(path.join(h.state,'pending')));
   }
   {
    const h=makeHarness(format,'success'), process=await runWorker(h);
