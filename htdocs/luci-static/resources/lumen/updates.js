@@ -217,13 +217,14 @@ function downloads(release, format) {
 	if (format !== 'apk' && format !== 'ipk') throw failure('metadata');
 	return release.assets.map((asset) => {
 		let kind = null;
-		if (new RegExp('^luci-theme-lumen[-_][A-Za-z0-9.+~_-]+\\.' + format + '$').test(asset.name)) kind = 'theme';
+		if (new RegExp('^luci-theme-lumen-fonts[-_][A-Za-z0-9.+~_-]+\\.' + format + '$').test(asset.name)) kind = 'fonts';
+		else if (new RegExp('^luci-theme-lumen[-_][A-Za-z0-9.+~_-]+\\.' + format + '$').test(asset.name)) kind = 'theme';
 		else if (new RegExp('^luci-i18n-lumen-zh-cn[-_][A-Za-z0-9.+~_-]+\\.' + format + '$').test(asset.name)) kind = 'translation';
 		else if (asset.name === 'lumen-usign.pub' || (format === 'apk' && asset.name === 'lumen-apk.pub')) kind = 'key';
 		else if (asset.name === 'SHA256SUMS' || asset.name === 'SHA256SUMS.sig') kind = 'checksum';
 		return kind ? Object.assign({ kind: kind }, asset) : null;
 	}).filter(Boolean).sort((a, b) => {
-		const order = { theme: 0, translation: 1, key: 2, checksum: 3 };
+		const order = { theme: 0, fonts: 1, translation: 2, key: 3, checksum: 4 };
 		return order[a.kind] - order[b.kind] || a.name.localeCompare(b.name);
 	});
 }

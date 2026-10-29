@@ -28,6 +28,10 @@ case "$release" in
 esac
 
 repo_root="$(cd "$(dirname "$0")/.." && pwd)"
+[[ -z "$(git -C "$repo_root" status --porcelain --untracked-files=normal)" ]] || {
+  echo 'The SDK build uses git archive: commit or otherwise capture all source changes in a clean checkout first.' >&2
+  exit 1
+}
 source_commit="$(git -C "$repo_root" rev-parse HEAD)"
 source_epoch="$(git -C "$repo_root" show -s --format=%ct HEAD)"
 dist="$repo_root/dist/openwrt-$release"
@@ -120,6 +124,7 @@ config = p.read_text() if p.exists() else ''
 settings = {
     'CONFIG_ALL': 'n', 'CONFIG_ALL_NONSHARED': 'n', 'CONFIG_ALL_KMODS': 'n',
     'CONFIG_PACKAGE_luci-theme-lumen': 'm',
+    'CONFIG_PACKAGE_luci-theme-lumen-fonts': 'm',
     # Some SDKs declare this language symbol as bool, so m is discarded.
     'CONFIG_PACKAGE_luci-i18n-lumen-zh-cn': 'm', 'CONFIG_LUCI_LANG_zh_Hans': 'y',
 }
@@ -132,7 +137,7 @@ p.write_text('\n'.join(lines) + '\n')
 PY
   make defconfig
   grep -qx 'CONFIG_LUCI_LANG_zh_Hans=y' .config
-  for package in luci-theme-lumen luci-i18n-lumen-zh-cn; do
+  for package in luci-theme-lumen luci-theme-lumen-fonts luci-i18n-lumen-zh-cn; do
     grep -Eq "^CONFIG_PACKAGE_${package}=[ym]$" .config || {
       printf 'Required package is not selected after defconfig: %s\n' "$package" >&2
       exit 1
@@ -145,8 +150,8 @@ PY
 
 mkdir -p "$dist" "$tools_dist/host/bin"
 mapfile -d '' packages < <(find "$sdk/bin" -type f \( -name "luci-theme-lumen*.$format" -o -name "luci-i18n-lumen-zh-cn*.$format" \) -print0)
-[[ "${#packages[@]}" == 2 ]] || {
-  printf 'Expected exactly the theme and Chinese translation packages; found %s.\n' "${#packages[@]}" >&2
+[[ "${#packages[@]}" == 3 ]] || {
+  printf 'Expected exactly the theme, optional fonts and Chinese translation packages; found %s.\n' "${#packages[@]}" >&2
   printf '%s\n' "${packages[@]}" >&2
   exit 1
 }

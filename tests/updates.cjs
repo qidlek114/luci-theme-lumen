@@ -173,8 +173,8 @@ test('download URLs are restricted to this release and repository; package forma
 		valid.replace('/v1.0.2/', '/v1.0.2%2Fescape/'), valid.replace('/download/', '/tag/'),
 		valid.replace('github.com', 'github.com:444')
 	]) assert.equal(u.assetURL(bad, 'v1.0.2', name), null, bad);
-	const names = [name, 'luci-i18n-lumen-zh-cn-1.0.2.apk', 'luci-theme-lumen_1.0.2-r1_all.ipk',
-		'luci-i18n-lumen-zh-cn_1.0.2_all.ipk', 'lumen-apk.pub', 'lumen-usign.pub', 'SHA256SUMS', 'SHA256SUMS.sig', 'source.zip'];
+	const names = [name, 'luci-theme-lumen-fonts-1.0.2-r1.apk', 'luci-i18n-lumen-zh-cn-1.0.2.apk', 'luci-theme-lumen_1.0.2-r1_all.ipk',
+		'luci-theme-lumen-fonts_1.0.2-r1_all.ipk', 'luci-i18n-lumen-zh-cn_1.0.2_all.ipk', 'lumen-apk.pub', 'lumen-usign.pub', 'SHA256SUMS', 'SHA256SUMS.sig', 'source.zip'];
 	const catalog = await u.fetchReleases({ fetcher: async () => response([release('v1.0.2', 2, {
 		assets: names.map(n => asset(n)).concat(asset('unsafe.apk', 'v1.0.2', { browser_download_url: 'https://attacker.invalid/unsafe.apk' }))
 	})]) });
@@ -182,6 +182,9 @@ test('download URLs are restricted to this release and repository; package forma
 	assert.equal(selected.omittedAssets, 1);
 	const apk = u.downloads(selected, 'apk'), ipk = u.downloads(selected, 'ipk');
 	assert.equal(apk.filter(a => a.kind === 'theme').length, 1);
+	assert.equal(ipk.filter(a => a.kind === 'theme').length, 1);
+	assert.equal(apk.filter(a => a.kind === 'fonts').length, 1);
+	assert.equal(ipk.filter(a => a.kind === 'fonts').length, 1);
 	assert.equal(ipk.filter(a => a.kind === 'translation').length, 1);
 	assert.equal(apk.some(a => a.name.endsWith('.ipk')), false);
 	assert.equal(ipk.some(a => a.name.endsWith('.apk') || a.name === 'lumen-apk.pub'), false);

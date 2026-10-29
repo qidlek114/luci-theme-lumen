@@ -4,14 +4,14 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=luci-theme-lumen
-PKG_VERSION:=1.0.1
+PKG_VERSION:=1.0.2
 PKG_RELEASE:=1
-PKG_PO_VERSION:=1.0.1
+PKG_PO_VERSION:=1.0.2
 PKG_LICENSE:=Apache-2.0 ISC MIT OFL-1.1
 PKG_LICENSE_FILES:=root/usr/share/doc/luci-theme-lumen/LICENSE root/usr/share/doc/luci-theme-lumen/NOTICE root/usr/share/doc/luci-theme-lumen/licenses/Lucide-LICENSE root/usr/share/doc/luci-theme-lumen/licenses/Source-Serif-OFL.md
 
 LUCI_TITLE:=Lumen theme with dashboard and appearance settings
-LUCI_DESCRIPTION:=Responsive LuCI theme for the ucode runtime, with locally hosted fonts and icons.
+LUCI_DESCRIPTION:=Responsive LuCI theme for the ucode runtime, with local icons and optional self-hosted fonts.
 LUCI_DEPENDS:=+luci-base +luci-mod-status +luci-theme-bootstrap
 LUCI_PKGARCH:=all
 LUCI_URL:=https://github.com/qidlek114/luci-theme-lumen
@@ -25,6 +25,10 @@ LUCI_MINIFY_JS:=0
 define Build/Prepare/luci-theme-lumen
 	$(INSTALL_DIR) $(PKG_BUILD_DIR)/htdocs/luci-static/resources/lumen
 	printf '%s\n' '{"version":"$(PKG_VERSION)","format":"$(if $(CONFIG_USE_APK),apk,ipk)"}' > $(PKG_BUILD_DIR)/htdocs/luci-static/resources/lumen/version.json
+	# Keep the optional fonts outside htdocs before luci.mk installs the theme.
+	$(INSTALL_DIR) $(PKG_BUILD_DIR)/lumen-fonts
+	mv $(PKG_BUILD_DIR)/htdocs/luci-static/lumen/fonts.css $(PKG_BUILD_DIR)/lumen-fonts/
+	mv $(PKG_BUILD_DIR)/htdocs/luci-static/lumen/fonts $(PKG_BUILD_DIR)/lumen-fonts/
 endef
 
 define Package/luci-theme-lumen/conffiles
@@ -51,4 +55,26 @@ endef
 # Supports a standalone checkout in package/ or a LuCI feed checkout.
 include $(if $(wildcard ../../luci.mk),../../luci.mk,$(TOPDIR)/feeds/luci/luci.mk)
 
-# call BuildPackage - OpenWrt buildroot signature
+define Package/luci-theme-lumen-fonts
+  SECTION:=luci
+  CATEGORY:=LuCI
+  SUBMENU:=4. Themes
+  TITLE:=Optional self-hosted fonts for Lumen
+  DEPENDS:=+luci-theme-lumen
+  VERSION:=$(PKG_VERSION)-r$(PKG_RELEASE)
+  PKGARCH:=all
+  URL:=$(LUCI_URL)
+  MAINTAINER:=$(LUCI_MAINTAINER)
+endef
+
+define Package/luci-theme-lumen-fonts/description
+  Optional Noto Serif SC and Source Serif 4 fonts for the Lumen theme.
+endef
+
+define Package/luci-theme-lumen-fonts/install
+	$(INSTALL_DIR) $(1)/www/luci-static/lumen
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/lumen-fonts/fonts.css $(1)/www/luci-static/lumen/
+	$(CP) $(PKG_BUILD_DIR)/lumen-fonts/fonts $(1)/www/luci-static/lumen/
+endef
+
+$(eval $(call BuildPackage,luci-theme-lumen-fonts))

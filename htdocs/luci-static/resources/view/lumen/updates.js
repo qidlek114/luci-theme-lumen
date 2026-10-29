@@ -32,6 +32,7 @@ function issueText(issue) {
 function assetLabel(kind) {
 	switch (kind) {
 	case 'theme': return _('Theme package');
+	case 'fonts': return _('Optional fonts package');
 	case 'translation': return _('Simplified Chinese package');
 	case 'key': return _('Verification key');
 	default: return _('Checksums / signature');

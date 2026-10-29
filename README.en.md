@@ -8,6 +8,8 @@ A responsive theme for modern OpenWrt LuCI, with light and dark appearances, a c
 
 [简体中文](README.md) · [Releases](https://github.com/qidlek114/luci-theme-lumen/releases) · [Issues](https://github.com/qidlek114/luci-theme-lumen/issues) · [Contributing](CONTRIBUTING.md)
 
+> The in-development 1.0.2 source separates the bundled fonts into an optional package to reduce the core installation footprint. This change has not yet passed an SDK build, signing, or device installation validation; the v1.0.1 evidence below applies only to the previously released version. See the [font packaging notes](docs/FONT-PACKAGING.md).
+
 ![Dark desktop appearance with synthetic demo data](docs/screenshots/desktop-dark.png)
 
 ## Features
@@ -16,7 +18,7 @@ A responsive theme for modern OpenWrt LuCI, with light and dark appearances, a c
 - Dedicated Lumen dashboard, load / bandwidth / connection charts and appearance settings.
 - Device identity, interfaces and metrics read from the system; optional display-name overrides.
 - Responsive tables, long text, action buttons and status cards.
-- Locally hosted fonts and SVG icons; no external font or icon CDN.
+- Local SVG icons and optional self-hosted fonts; without the font package, the browsing device uses system fonts. No external font or icon CDN is required.
 - English and editable Simplified Chinese PO translations.
 - Manual GitHub update checks, target-version selection and all intervening stable release notes, with matching package downloads and no automatic installation.
 
@@ -34,7 +36,7 @@ Both SDK builds succeeded. Source correspondence checks cover 235 runtime files 
 
 On a live OpenWrt 25.12.6 device, only five update-page UI files were deployed. A real browser confirmed the Chinese interface and manual GitHub query; the proxy remained unchanged. **No complete release-package installation was performed on the router, and neither the isolated environments nor the router underwent a full boot/reboot test.** These results do not establish universal firmware/browser compatibility or bit-reproducible builds. See the [validation record](docs/VALIDATION.md) for provenance, exact scope and limits. Older Lua LuCI is unsupported; vendor-specific pages and future LuCI releases are outside the verified scope.
 
-Bundled fonts occupy approximately 6.53 MB uncompressed, in addition to scripts, styles and templates. Allow space for installation and upgrades.
+The released v1.0.1 bundles approximately 6.53 MB of fonts uncompressed, in addition to scripts, styles and templates. Allow space for installation and upgrades. See the note above for the in-development font split.
 
 ## Build from source
 

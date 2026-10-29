@@ -10,6 +10,7 @@
 
 	const boardinfo = ubus.call('system', 'board');
 	const ver = stat('/www/luci-static/lumen/lumen.css')?.mtime ?? 1;
+	const fontver = stat('/www/luci-static/lumen/fonts.css')?.mtime ?? null;
 
 	/* appearance settings (Lumen → Appearance) */
 	const sc = cursor().get_all('lumen', 'main') ?? {};
@@ -73,8 +74,10 @@
 		<meta name="apple-mobile-web-app-title" content="{{ entityencode(hostname, true) }}">
 		<link rel="apple-touch-icon" href="{{ media }}/logo.svg">
 		<meta name="darkreader-lock">
+		{% if (fontver != null): %}
 		<link rel="preload" href="{{ media }}/fonts/source-serif-4-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
-		<link rel="stylesheet" href="{{ media }}/fonts.css?v={{ ver }}">
+		<link rel="stylesheet" href="{{ media }}/fonts.css?v={{ fontver }}">
+		{% endif %}
 		<link rel="stylesheet" href="{{ media }}/base.css?v={{ ver }}">
 		<link rel="stylesheet" href="{{ media }}/mobile.css?v={{ ver }}">
 		<link rel="stylesheet" href="{{ media }}/lumen.css?v={{ ver }}">
