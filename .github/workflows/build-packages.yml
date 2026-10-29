@@ -8,6 +8,16 @@ on:
         required: false
         type: string
         default: ''
+      upload_unsigned_draft:
+        description: 'Upload unsigned build packages to an empty v1.0.2 draft (never publish)'
+        required: false
+        type: boolean
+        default: false
+      verified_test_run:
+        description: 'Successful installation test run ID for draft uploads'
+        required: false
+        type: string
+        default: ''
 
 permissions:
   contents: read
@@ -16,7 +26,7 @@ permissions:
 jobs:
   build:
     name: OpenWrt ${{ matrix.release }} (${{ matrix.format }})
-    if: inputs.reuse_fixture_run == ''
+    if: inputs.reuse_fixture_run == '' && !inputs.upload_unsigned_draft
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     strategy:
@@ -61,7 +71,7 @@ jobs:
 
   arm-fixtures:
     name: Prepare isolated installation fixtures
-    if: inputs.reuse_fixture_run == ''
+    if: inputs.reuse_fixture_run == '' && !inputs.upload_unsigned_draft
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     needs: build
@@ -92,7 +102,7 @@ jobs:
 
   arm-install:
     name: ${{ matrix.arch }} / OpenWrt ${{ matrix.release }}
-    if: always() && (inputs.reuse_fixture_run != '' || needs.arm-fixtures.result == 'success')
+    if: always() && !inputs.upload_unsigned_draft && (inputs.reuse_fixture_run != '' || needs.arm-fixtures.result == 'success')
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 20
     needs: arm-fixtures
@@ -133,3 +143,69 @@ jobs:
           done
       - name: Verify installation, upgrade, optional fonts and removal
         run: bash scripts/test-arm.sh '${{ matrix.release }}' '${{ matrix.arch }}' fixtures
+
+  upload-unsigned-draft:
+    name: Attach verified unsigned builds to draft only
+    if: inputs.upload_unsigned_draft
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      actions: read
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Check selected run IDs
+        shell: bash
+        env:
+          SOURCE_RUN: ${{ inputs.reuse_fixture_run }}
+          TEST_RUN: ${{ inputs.verified_test_run }}
+        run: |
+          [[ "$SOURCE_RUN" =~ ^[0-9]+$ && "$TEST_RUN" =~ ^[0-9]+$ ]]
+      - uses: actions/download-artifact@v4
+        with:
+          name: unsigned-openwrt-25.12.6-apk
+          path: unsigned/apk
+          run-id: ${{ inputs.reuse_fixture_run }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+      - uses: actions/download-artifact@v4
+        with:
+          name: unsigned-openwrt-24.10.8-ipk
+          path: unsigned/ipk
+          run-id: ${{ inputs.reuse_fixture_run }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Verify inputs and upload to the empty draft
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TEST_RUN: ${{ inputs.verified_test_run }}
+        run: |
+          set -euo pipefail
+          run_json="$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$TEST_RUN")"
+          jq -e '.name == "Build installable packages" and .event == "workflow_dispatch" and .status == "completed" and .conclusion == "success"' <<< "$run_json" >/dev/null
+          test_commit="$(jq -r .head_sha <<< "$run_json")"
+          [[ "$test_commit" =~ ^[0-9a-f]{40}$ ]]
+          git cat-file -e "$test_commit^{commit}"
+          git diff --exit-code "$test_commit" HEAD -- Makefile htdocs root po licenses scripts/test-arm.sh scripts/test-arm-container.sh scripts/prepare-arm-fixtures.sh
+          for dir in unsigned/apk unsigned/ipk; do
+            (cd "$dir" && sha256sum --strict -c SHA256SUMS.build)
+            source_commit="$(node -p "require('./$dir/BUILDINFO.json').source_commit")"
+            [[ "$source_commit" =~ ^[0-9a-f]{40}$ ]]
+            git cat-file -e "$source_commit^{commit}"
+            git diff --exit-code "$source_commit" HEAD -- Makefile htdocs root po licenses
+          done
+          release_id="$(gh api "repos/$GITHUB_REPOSITORY/releases?per_page=100" --jq '[.[] | select(.draft == true and .tag_name == "v1.0.2" and (.name | contains("待签名"))) | select((.assets | length) == 0) | .id] | if length == 1 then .[0] else empty end')"
+          [[ "$release_id" =~ ^[0-9]+$ ]]
+          shopt -s nullglob
+          files=(unsigned/apk/*.apk unsigned/ipk/*.ipk)
+          [[ "${#files[@]}" == 6 ]]
+          for file in "${files[@]}"; do
+            name="$(basename "$file")"
+            [[ "$name" =~ ^[a-zA-Z0-9._-]+$ ]]
+            expected="sha256:$(sha256sum "$file" | cut -d ' ' -f1)"
+            digest="$(gh api --method POST -H 'Content-Type: application/octet-stream' --input "$file" "https://uploads.github.com/repos/$GITHUB_REPOSITORY/releases/$release_id/assets?name=$name" --jq .digest)"
+            [[ "$digest" == "$expected" ]]
+            echo "Uploaded and checked $name ($digest)"
+          done
