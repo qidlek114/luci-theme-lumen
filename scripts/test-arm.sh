@@ -44,9 +44,9 @@ docker import --platform "$platform" "$work/$rootfs" "$image" >/dev/null
 # Install the normal, officially signed runtime dependency using the feeds
 # shipped in the authenticated rootfs; all theme tests below remain offline.
 if [[ "$format" == apk ]]; then
-  prepare='apk update && apk add curl'
+  prepare='mkdir -p /var/lock && apk update && apk add curl'
 else
-  prepare='opkg update && opkg install curl'
+  prepare='mkdir -p /var/lock && opkg update && opkg install curl'
 fi
 container="$(docker create --platform "$platform" --memory 128m --memory-swap 128m "$image" /bin/sh -c "$prepare")"
 docker start -a "$container"
