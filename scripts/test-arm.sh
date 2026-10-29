@@ -43,6 +43,23 @@ download "$base/$rootfs" "$work/$rootfs"
   sha256sum --strict -c rootfs.sha256
 )
 
+# Also test the actual immediately preceding signed release used by the
+# updater. The older v1.0.1 fixture still checks the full-font migration.
+mkdir -p "$work/baseline"
+cp docs/keys/v1.0.2/lumen-apk.pub docs/keys/v1.0.2/lumen-usign.pub "$work/baseline/"
+openssl pkey -pubin -in "$work/baseline/lumen-apk.pub" -outform DER -out "$work/baseline-apk.der"
+printf '%s  %s\n' 'e3d1ad71726efe0d80e38e1cbffba7f328b2e49afac068a7f55d295dcaa80c75' "$work/baseline-apk.der" | sha256sum -c -
+printf '%s  %s\n' 'fc4b502acfae4dfec67c842bc5aeeedac729736a6e1b3eefe23108159faaab8d' "$work/baseline/lumen-usign.pub" | sha256sum -c -
+base_release='https://github.com/qidlek114/luci-theme-lumen/releases/download/v1.0.2'
+if [[ "$format" == apk ]]; then
+  baseline_files=(luci-theme-lumen-1.0.2-r1.apk luci-i18n-lumen-zh-cn-1.0.2.apk)
+else
+  baseline_files=(luci-theme-lumen_1.0.2-r1_all.ipk luci-i18n-lumen-zh-cn_1.0.2_all.ipk)
+fi
+for file in SHA256SUMS SHA256SUMS.sig "${baseline_files[@]}"; do
+  download "$base_release/$file" "$work/baseline/$file"
+done
+
 docker import --platform "$platform" "$work/$rootfs" "$image" >/dev/null
 # The stock images include usign, flock and rpcd-mod-ucode but not curl.
 # Install the normal, officially signed runtime dependency using the feeds
@@ -59,5 +76,6 @@ docker rm "$container" >/dev/null
 container=''
 docker run --rm --platform "$platform" --network none --memory 128m --memory-swap 128m \
   --mount "type=bind,src=$fixtures,dst=/fixtures,readonly" \
+  --mount "type=bind,src=$work/baseline,dst=/baseline,readonly" \
   --mount "type=bind,src=$(realpath scripts/test-arm-container.sh),dst=/test-arm.sh,readonly" \
   "$prepared" /bin/sh /test-arm.sh "$format" "$arch"

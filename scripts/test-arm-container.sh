@@ -114,6 +114,41 @@ install_packages "$new_theme" "$new_zh"
 test ! -e /www/luci-static/lumen/fonts.css
 [ "$(uci get luci.main.mediaurlbase)" = '/luci-static/lumen' ]
 
+# Verify and downgrade to the real v1.0.2 baseline with the same offline
+# package-manager options used by the updater, then upgrade again. The
+# disposable new APK carries only the CI test key; the baseline retains the
+# project's real release signature.
+(cd /baseline && usign -V -p lumen-usign.pub -m SHA256SUMS -x SHA256SUMS.sig)
+if [ "$format" = apk ]; then
+  baseline_theme=/baseline/luci-theme-lumen-1.0.2-r1.apk
+  baseline_zh=/baseline/luci-i18n-lumen-zh-cn-1.0.2.apk
+  mkdir -p /tmp/baseline-keys
+  cp /baseline/lumen-apk.pub /tmp/baseline-keys/
+  apk --keys-dir /tmp/baseline-keys verify "$baseline_theme" "$baseline_zh"
+else
+  baseline_theme=/baseline/luci-theme-lumen_1.0.2-r1_all.ipk
+  baseline_zh=/baseline/luci-i18n-lumen-zh-cn_1.0.2_all.ipk
+fi
+(cd /baseline && awk -v core="${baseline_theme##*/}" -v zh="${baseline_zh##*/}" '$2==core || $2==zh {print; n++} END {if(n!=2) exit 1}' SHA256SUMS > /tmp/baseline.sha256 && sha256sum -c /tmp/baseline.sha256)
+if [ "$format" = apk ]; then
+  apk --keys-dir /tmp/baseline-keys --network=no --cache=no --repositories-file /dev/null add --simulate "$baseline_theme" "$baseline_zh"
+  apk --keys-dir /tmp/baseline-keys --network=no --cache=no --repositories-file /dev/null add "$baseline_theme" "$baseline_zh"
+else
+  OPKG_CONF_DIR=/tmp/lumen-opkg-empty opkg --conf /tmp/lumen-opkg.conf --force-downgrade --noaction install "$baseline_theme" "$baseline_zh"
+  OPKG_CONF_DIR=/tmp/lumen-opkg-empty opkg --conf /tmp/lumen-opkg.conf --force-downgrade install "$baseline_theme" "$baseline_zh"
+fi
+[ "$(jsonfilter -i /www/luci-static/resources/lumen/version.json -e '@.version')" = '1.0.2' ]
+[ "$(uci get lumen.main.style)" = 'claude' ]
+[ "$(uci get luci.main.mediaurlbase)" = '/luci-static/lumen' ]
+if [ "$format" = apk ]; then
+  apk --keys-dir /tmp/test-keys --network=no --cache=no --repositories-file /dev/null add --simulate "$new_theme" "$new_zh"
+  apk --keys-dir /tmp/test-keys --network=no --cache=no --repositories-file /dev/null add "$new_theme" "$new_zh"
+else
+  OPKG_CONF_DIR=/tmp/lumen-opkg-empty opkg --conf /tmp/lumen-opkg.conf --force-downgrade --noaction install "$new_theme" "$new_zh"
+  OPKG_CONF_DIR=/tmp/lumen-opkg-empty opkg --conf /tmp/lumen-opkg.conf --force-downgrade install "$new_theme" "$new_zh"
+fi
+[ "$(uci get luci.main.mediaurlbase)" = '/luci-static/lumen' ]
+
 install_packages "$new_fonts"
 test -f /www/luci-static/lumen/fonts.css
 [ "$(find /www/luci-static/lumen/fonts -name '*.woff2' | wc -l | tr -d ' ')" = 208 ]
