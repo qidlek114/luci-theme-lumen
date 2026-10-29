@@ -11,8 +11,10 @@
     document.documentElement.dataset.mode = mode;
     document.documentElement.dataset.darkmode = String(mode === 'dark');
     document.documentElement.dataset.style = query.get('style') === 'claude' ? 'claude' : 'default';
+    document.documentElement.lang = query.get('lang') === 'en' ? 'en' : 'zh-CN';
+    document.documentElement.dataset.demoView = document.documentElement.lang === 'en' && query.get('view') === 'updates' ? 'updates' : 'dashboard';
   </script>
-  <link rel="stylesheet" href="../../htdocs/luci-static/lumen/fonts.css">
+  <link id="bundled-fonts" rel="stylesheet" href="../../htdocs/luci-static/lumen/fonts.css">
   <link rel="stylesheet" href="../../htdocs/luci-static/lumen/base.css">
   <link rel="stylesheet" href="../../htdocs/luci-static/lumen/mobile.css">
   <link rel="stylesheet" href="../../htdocs/luci-static/lumen/lumen.css">
@@ -26,24 +28,24 @@
         <span class="brand-text"><span class="brand-name">Lumen</span><span class="brand-model">OpenWrt · Theme preview</span></span>
       </a>
       <nav class="sidebar-nav" id="mainmenu">
-        <div class="sb-label">导航</div>
-        <a class="sb-item active" href="#maincontent"><span class="sb-icon" data-icon="dashboard"></span><span class="sb-text">仪表盘</span></a>
-        <a class="sb-item" href="#traffic"><span class="sb-icon" data-icon="activity"></span><span class="sb-text">实时流量</span></a>
-        <a class="sb-item" href="#devices"><span class="sb-icon" data-icon="network"></span><span class="sb-text">网络</span></a>
-        <a class="sb-item" href="#system"><span class="sb-icon" data-icon="settings"></span><span class="sb-text">系统</span></a>
-        <a class="sb-item" href="#appearance"><span class="sb-icon" data-icon="palette"></span><span class="sb-text">外观</span></a>
+        <div class="sb-label" data-en="Navigation">导航</div>
+        <a class="sb-item active" href="#maincontent"><span class="sb-icon" data-icon="dashboard"></span><span class="sb-text" data-en="Dashboard">仪表盘</span></a>
+        <a class="sb-item" href="#traffic"><span class="sb-icon" data-icon="activity"></span><span class="sb-text" data-en="Live traffic">实时流量</span></a>
+        <a class="sb-item" href="#devices"><span class="sb-icon" data-icon="network"></span><span class="sb-text" data-en="Network">网络</span></a>
+        <a class="sb-item" href="#system"><span class="sb-icon" data-icon="settings"></span><span class="sb-text" data-en="System">系统</span></a>
+        <a class="sb-item" href="#appearance"><span class="sb-icon" data-icon="palette"></span><span class="sb-text" data-en="Appearance">外观</span></a>
       </nav>
       <div class="sidebar-footer"><div class="sb-label">Lumen · OpenWrt LuCI theme</div></div>
     </aside>
     <div class="sidebar-overlay" id="sidebar-overlay"></div>
     <div class="main">
       <header class="topbar">
-        <button type="button" class="icon-btn" id="sidebar-toggle" title="切换侧栏" aria-label="切换侧栏"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M9 3v18"/></svg></button>
-        <span class="topbar-sep"></span><ol class="crumbs"><li>Lumen</li><li>仪表盘</li></ol>
-        <div class="topbar-right"><span class="demo-badge">演示数据 <span>· Demo data</span></span><button class="icon-btn" id="theme-toggle" title="切换明暗主题" aria-label="切换明暗主题"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.4 1.4M17.6 17.6 19 19M5 19l1.4-1.4M17.6 6.4 19 5"/></svg></button></div>
+        <button type="button" class="icon-btn" id="sidebar-toggle" title="切换侧栏" aria-label="切换侧栏" data-en-label="Toggle sidebar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M9 3v18"/></svg></button>
+        <span class="topbar-sep"></span><ol class="crumbs"><li>Lumen</li><li data-en="Dashboard">仪表盘</li></ol>
+        <div class="topbar-right"><span class="demo-badge" data-en="Demo data">演示数据 <span>· Demo data</span></span><button class="icon-btn" id="theme-toggle" title="切换明暗主题" aria-label="切换明暗主题" data-en-label="Toggle light and dark mode"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.4 1.4M17.6 17.6 19 19M5 19l1.4-1.4M17.6 6.4 19 5"/></svg></button></div>
       </header>
-      <main id="maincontent" class="container"><div id="view"><p class="demo-loading">正在加载主题预览…</p></div></main>
-      <footer class="page-footer"><span>Lumen · 当前主题真实组件与样式，全部展示值均为演示数据。此页面不连接路由器。</span></footer>
+      <main id="maincontent" class="container"><div id="view"><p class="demo-loading" data-en="Loading theme preview…">正在加载主题预览…</p></div></main>
+      <footer class="page-footer"><span data-en="Lumen · Theme components with synthetic demonstration data. This page does not connect to a router.">Lumen · 当前主题真实组件与样式，全部展示值均为演示数据。此页面不连接路由器。</span></footer>
     </div>
   </div>
   <script src="preview.js"></script>
