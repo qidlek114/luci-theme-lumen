@@ -1,6 +1,6 @@
 #!/bin/sh
 # Invoked only in a disposable OpenWrt container with no network access.
-set -eu
+set -eux
 format="$1"
 arch="$2"
 case "$arch:$(uname -m)" in
@@ -70,7 +70,10 @@ install_packages "$new_theme" "$new_zh"
 test -f /www/luci-static/lumen/lumen.css
 test -f /usr/share/ucode/luci/template/themes/lumen/header.ut
 test ! -e /www/luci-static/lumen/fonts.css
-test ! -e /www/luci-static/lumen/fonts
+# opkg may retain the now-empty directory after removing the old font files.
+if [ -d /www/luci-static/lumen/fonts ]; then
+  test -z "$(find /www/luci-static/lumen/fonts -type f -print -quit)"
+fi
 ucode -T -c /usr/share/ucode/luci/template/themes/lumen/header.ut > /tmp/lumen-header.uc
 
 install_packages "$new_fonts"
