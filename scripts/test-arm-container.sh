@@ -4,7 +4,7 @@ set -eu
 format="$1"
 arch="$2"
 case "$arch:$(uname -m)" in
-  armv8:aarch64|armv7:armv7l|armv7:armv8l) ;;
+  armv8:aarch64|armv7:armv7l|armv7:armv8l|x86_64:x86_64) ;;
   *) echo "Unexpected target architecture: $arch / $(uname -m)" >&2; exit 1 ;;
 esac
 echo "Testing $format on $(uname -m) with a 128 MiB container memory limit"
@@ -37,6 +37,9 @@ if [ "$format" = apk ]; then
   install_packages() { apk --no-network add "$@"; }
   remove_packages() { apk --no-network del "$@"; }
 else
+  # In a booted router /var is backed by /tmp and initialized by procd.
+  # A rootfs imported directly into a container has no boot sequence.
+  mkdir -p /var/lock
   old_theme=/fixtures/old/luci-theme-lumen_1.0.1-r1_all.ipk
   old_zh=/fixtures/old/luci-i18n-lumen-zh-cn_1.0.1_all.ipk
   set -- /fixtures/new-ipk/luci-theme-lumen_[0-9]*.ipk; [ "$#" = 1 ] && [ -f "$1" ]; new_theme="$1"

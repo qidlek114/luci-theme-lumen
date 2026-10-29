@@ -21,17 +21,17 @@ translations, dependencies, filesystem allocation and upgrades add overhead.
 
 The staging check runs the package preparation and optional-font install recipes
 for both format settings, checks all 208 font assets and their licenses, and
-confirms the core has no bundled fonts. It does **not** build APK/IPK packages or
-test a package manager. The SDK script builds from a committed source tree using
-`git archive` and rejects an unclean checkout so that local changes cannot be
-silently omitted.
+confirms the core has no bundled fonts. The SDK workflow separately builds APK
+and IPK packages from a committed source tree using `git archive`. It rejects an
+unclean checkout so that local changes cannot be silently omitted. Its isolated
+package tests exercise installation and upgrades using test-signed copies.
 
-Before publishing or installing a new package, build and verify it with the
-matching OpenWrt SDK, then test installation, upgrade from 1.0.1, optional-font
-installation/removal and theme fallback in an isolated environment. Validate
-both APK and IPK signatures and include any font-package asset in the signed
-release manifest. No SDK build, signed release, ARM installation, reboot test or
-low-memory performance measurement is claimed for this source change.
+Before publishing a new package, verify it with the matching OpenWrt SDK and
+test installation, upgrade from 1.0.1, optional-font installation/removal and
+theme fallback in an isolated environment. Validate release signatures and
+include the font-package asset in the signed release manifest. An isolated
+rootfs test does not establish physical-device boot, browser acceptance or
+whole-router low-memory performance.
 
 The existing v1.0.1 release remains unchanged and still bundles its fonts in the
 theme package. Firmware compatibility depends on the LuCI runtime and package

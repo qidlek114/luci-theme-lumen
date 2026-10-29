@@ -2,13 +2,21 @@ name: Build installable packages
 
 on:
   workflow_dispatch:
+    inputs:
+      reuse_fixture_run:
+        description: 'Optional successful fixture run ID; reuse only when package source is unchanged'
+        required: false
+        type: string
+        default: ''
 
 permissions:
   contents: read
+  actions: read
 
 jobs:
   build:
     name: OpenWrt ${{ matrix.release }} (${{ matrix.format }})
+    if: inputs.reuse_fixture_run == ''
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     strategy:
@@ -52,7 +60,8 @@ jobs:
           retention-days: 7
 
   arm-fixtures:
-    name: Prepare isolated ARM installation fixtures
+    name: Prepare isolated installation fixtures
+    if: inputs.reuse_fixture_run == ''
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     needs: build
@@ -82,19 +91,26 @@ jobs:
           retention-days: 3
 
   arm-install:
-    name: ARM ${{ matrix.arch }} / OpenWrt ${{ matrix.release }}
-    runs-on: ubuntu-24.04-arm
+    name: ${{ matrix.arch }} / OpenWrt ${{ matrix.release }}
+    if: always() && (inputs.reuse_fixture_run != '' || needs.arm-fixtures.result == 'success')
+    runs-on: ${{ matrix.runner }}
     timeout-minutes: 20
     needs: arm-fixtures
     strategy:
       fail-fast: false
       matrix:
-        release: ['25.12.6', '24.10.8']
-        arch: ['armv8', 'armv7']
+        include:
+          - {release: '25.12.6', arch: armv8, runner: ubuntu-24.04-arm}
+          - {release: '25.12.6', arch: armv7, runner: ubuntu-24.04-arm}
+          - {release: '24.10.8', arch: armv8, runner: ubuntu-24.04-arm}
+          - {release: '24.10.8', arch: armv7, runner: ubuntu-24.04-arm}
+          - {release: '25.12.6', arch: x86_64, runner: ubuntu-24.04}
+          - {release: '24.10.8', arch: x86_64, runner: ubuntu-24.04}
     steps:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
+          fetch-depth: 0
       - name: Enable ARMv7 emulation on the ARM64 runner
         if: matrix.arch == 'armv7'
         uses: docker/setup-qemu-action@v3
@@ -104,5 +120,16 @@ jobs:
         with:
           name: arm-installation-fixtures
           path: fixtures
+          run-id: ${{ inputs.reuse_fixture_run || github.run_id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Confirm reused package source matches this checkout
+        shell: bash
+        run: |
+          for info in fixtures/new-apk/BUILDINFO.json fixtures/new-ipk/BUILDINFO.json; do
+            source_commit="$(node -p "require('./$info').source_commit")"
+            [[ "$source_commit" =~ ^[0-9a-f]{40}$ ]]
+            git cat-file -e "$source_commit^{commit}"
+            git diff --exit-code "$source_commit" HEAD -- Makefile htdocs root po licenses
+          done
       - name: Verify installation, upgrade, optional fonts and removal
         run: bash scripts/test-arm.sh '${{ matrix.release }}' '${{ matrix.arch }}' fixtures
