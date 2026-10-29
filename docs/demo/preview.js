@@ -19,6 +19,8 @@ const translations = {
 const english = document.documentElement.lang === 'en';
 const updatesDemo = document.documentElement.dataset.demoView === 'updates';
 if (english) {
+  // Match the lightweight core package, which uses system fonts by default.
+  document.getElementById('bundled-fonts').disabled = true;
   document.title = 'Lumen · Demo data';
   document.body.classList.replace('lang_zh-cn', 'lang_en');
   document.querySelectorAll('[data-en]').forEach(el => { el.textContent = el.dataset.en; });

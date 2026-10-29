@@ -27,7 +27,7 @@ A responsive theme for modern OpenWrt LuCI, with light and dark appearances, a c
 
 <img src="docs/screenshots/mobile-en.jpg" width="360" alt="Mobile layout with synthetic demo data">
 
-**All screenshots use synthetic demonstration data. They are not device benchmarks or live network records.** To reproduce them, serve the repository root locally and open `docs/demo/?lang=en`; add `&mode=light` for the light theme or `&view=updates` for the sample update page.
+**All screenshots use synthetic demonstration data. They are not device benchmarks or live network records.** The English previews use system fonts, matching the lightweight core package. To reproduce them, serve the repository root locally and open `docs/demo/?lang=en`; add `&mode=light` for the light theme or `&view=updates` for the sample update page.
 
 ## Compatibility and validation
 
