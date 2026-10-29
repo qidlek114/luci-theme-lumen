@@ -21,7 +21,7 @@ A responsive theme for modern OpenWrt LuCI, with light and dark appearances, a c
 - Responsive tables, long text, action buttons and status cards.
 - Local SVG icons and optional self-hosted fonts; without the font package, the browsing device uses system fonts. No external font or icon CDN is required.
 - English and editable Simplified Chinese PO translations.
-- Manual GitHub update checks, target-version selection and all intervening stable release notes, with matching package downloads and no automatic installation.
+- Router-side signed one-click updates with a verified rollback, plus browser-based release history and manual downloads.
 
 ![Light desktop appearance with synthetic demo data](docs/screenshots/desktop-light-en.jpg)
 
@@ -31,9 +31,9 @@ A responsive theme for modern OpenWrt LuCI, with light and dark appearances, a c
 
 ## Compatibility and validation
 
-v1.0.2 targets **ucode-based LuCI**, with OpenWrt SDK 25.12.6 for APK (`noarch`) and SDK 24.10.8 for IPK (`all`). Architecture-independent resources still require a matching package format and LuCI runtime. Dependencies are `luci-base`, `luci-mod-status` and `luci-theme-bootstrap` as an uninstall fallback. Built-in LuCI routes remain intact; additional pages live under `admin/lumen/`.
+v1.0.2 targets **ucode-based LuCI**, with OpenWrt SDK 25.12.6 for APK (`noarch`) and SDK 24.10.8 for IPK (`all`). Architecture-independent resources still require a matching package format and LuCI runtime. v1.0.2 depends on `luci-base`, `luci-mod-status` and `luci-theme-bootstrap` as an uninstall fallback. The automatic updater also needs `curl`, `usign` and `rpcd-mod-ucode`. Built-in LuCI routes remain intact; additional pages live under `admin/lumen/`.
 
-Installation, upgrade and removal were checked in isolated ARMv7, ARMv8 and x86_64 OpenWrt environments; ARMv7 used emulation. See the [v1.0.2 validation record](docs/VALIDATION-v1.0.2.md) for exact scope, signatures and build provenance, and the [v1.0.1 record](docs/VALIDATION.md) for the prior release. Only the Wake-on-LAN layout fix was applied to the main router; **the complete new package was not installed and no physical boot/reboot acceptance was performed**. Older Lua LuCI, vendor-specific pages and other firmware versions are outside the tested scope.
+Installation, upgrade and removal were checked in isolated ARMv7, ARMv8 and x86_64 OpenWrt environments; ARMv7 used emulation. See the [v1.0.2 validation record](docs/VALIDATION-v1.0.2.md) for exact scope, signatures and build provenance, and the [v1.0.1 record](docs/VALIDATION.md) for the prior release. v1.0.2 was installed and its pages checked on an x86 device; **the automatic update and power-loss recovery have not yet completed physical-device acceptance**. Older Lua LuCI, vendor-specific pages and other firmware versions are outside the tested scope.
 
 The signed v1.0.2 core APK is approximately 77 KiB, around 98.8% smaller than the approximately 6.37 MiB v1.0.1 theme APK; the core IPK is also approximately 77 KiB. The optional bundled-font package adds approximately 6.3 MiB to download and corresponding installed storage. Allow space for packages and upgrades.
 
@@ -71,15 +71,17 @@ config theme 'main'
 
 `style` accepts `default` or `claude`; `mode` accepts `auto`, `light` or `dark`. Optional `hostname` and `model` override only the displayed identity; empty values use detected system information. This file is registered as a configuration file so the package manager can preserve local edits during upgrades.
 
-## Check for updates manually
+## Automatic updates and release history
 
-Open **Lumen → Updates** and press **Check GitHub for updates**. The page reads the installed version and APK/IPK format from local package metadata. Only pressing the button contacts this project's public GitHub API from the current browser, without login credentials or tokens. There is no polling or new backend installation permission.
+Open **Lumen → Updates** and press **Check and update automatically**. The router downloads, verifies and installs the update; confirmation follows a successful page reload, with recovery on failure. First install a verified package containing the updater. See the [automatic update guide](docs/AUTOMATIC-UPDATES.md) for firmware matching, proxy access and recovery conditions.
+
+Use **Check release history in this browser** to select a version and download it manually. This check reads local package metadata and contacts the public GitHub API from the browser without login credentials or tokens.
 
 Select a published stable version newer than the installed version. The page displays every published stable release **after the installed version and up to the target**, ordered by version. For example, selecting 1.1.0 from 1.0.0 includes published releases 1.0.1, 1.0.2 and 1.1.0, rather than only the target's notes. Drafts and prereleases are excluded; missing notes are explicitly identified. Release text is rendered as plain text, without executing HTML.
 
 A check reads at most 10 pages of 100 releases, with a 30-second total deadline for GitHub requests. Timeouts, rate limits, truncated history, unrecognized stable tags or incomplete data produce an explicit unknown-status warning and disable version selection/downloads. They are never reported as “up to date.”
 
-Downloads are limited to this repository's target Release assets: matching theme and Chinese packages, plus any provided verification keys and checksum files. **Matching the package format does not establish firmware compatibility, and downloads do not install anything.** Review requirements and verify signatures before confirming installation in LuCI's Software page. Its link is discovered from the accessible menu rather than inferred from the package format.
+Downloads are limited to this repository's target Release assets: matching theme and Chinese packages, plus any provided verification keys and checksum files. **Matching the package format does not establish firmware compatibility, and downloads in the release-history section do not install anything.** Review requirements and verify signatures before confirming installation in LuCI's Software page. Its link is discovered from the accessible menu rather than inferred from the package format.
 
 <details>
 <summary>Update page demo with sample release history</summary>
@@ -99,7 +101,7 @@ Prefer selecting an installed fallback theme in LuCI before uninstalling Lumen a
 - Extracted theme resources into a standalone package without router backups, real host inventories, network settings or proxy configuration.
 - Removed deployment-specific display values; links use LuCI URL generation and metrics use detected system interfaces.
 - Moved custom views under `admin/lumen/` instead of replacing native status routes; installation does not select the theme.
-- Scoped ACLs to required read-only metrics and writes to the `lumen` appearance configuration.
+- Scoped ACLs to required read-only metrics, `lumen` appearance settings and fixed signed update or rollback operations.
 - Included the chart dependency, editable Chinese catalogue and upstream licenses/attribution.
 
 This is not a security certification or a claim that every third-party LuCI app has been tested. Report firmware, LuCI and browser versions, the page path, and a privacy-safe screenshot when filing an issue.
@@ -115,7 +117,3 @@ node scripts/check.mjs
 ## License
 
 Original Lumen code is [Apache-2.0](LICENSE). The Bootstrap foundation is Apache-2.0, Lucide/Feather icons are ISC/MIT, and bundled fonts are SIL OFL 1.1. See [NOTICE](NOTICE) and [licenses](licenses) for attribution and complete terms.
-
-## Automatic updates
-
-[Read about signature verification, proxy access, rollback, and compatibility.](docs/AUTOMATIC-UPDATES.md)
