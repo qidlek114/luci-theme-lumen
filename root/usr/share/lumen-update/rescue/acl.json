@@ -1,0 +1,7 @@
+{
+	"luci-app-lumen-rescue": {
+		"description": "Use the independently retained Lumen updater",
+		"read": { "ubus": { "lumen.recovery": [ "status" ] } },
+		"write": { "ubus": { "lumen.recovery": [ "start", "confirm" ] } }
+	}
+}

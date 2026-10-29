@@ -1,0 +1,8 @@
+{
+	"admin/lumen/updates": {
+		"title": "Updates",
+		"order": 4,
+		"action": { "type": "view", "path": "lumen-rescue" },
+		"depends": { "acl": [ "luci-app-lumen-rescue" ] }
+	}
+}
