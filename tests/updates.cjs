@@ -310,6 +310,10 @@ test('retained update page starts without theme-owned updater and confirms only 
 	assert(!calls.some(c => c.method === 'confirm'), 'Missing new page must not confirm the update');
 	missing = '';await rescue.refresh({ state: 'waiting', target: '1.0.4' });
 	assert.deepEqual(calls.find(c => c.method === 'confirm'), { object: 'lumen.recovery', method: 'confirm', args: [] });
+	await rescue.refresh({ state: 'success', target: '1.0.4' });
+	assert.equal(reloads, 2, 'Successful update should reopen the full page with rollback controls');
+	await rescue.refresh({ state: 'success', target: '1.0.4' });
+	assert.equal(reloads, 2, 'A missing menu change must not cause a reload loop');
 });
 
 test('the UI never reports up-to-date on errors, empty lists, or missing metadata', async () => {

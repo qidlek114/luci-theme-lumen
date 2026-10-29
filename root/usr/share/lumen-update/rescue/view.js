@@ -41,7 +41,10 @@ return view.extend({
 		this.button.disabled = true;
 		this.message.textContent = tr('Starting the signed update check…', '正在启动签名更新检查…');
 		try {
-			try { sessionStorage.removeItem('lumen-rescue-reloaded'); } catch (e) {}
+			try {
+				sessionStorage.removeItem('lumen-rescue-reloaded');
+				sessionStorage.removeItem('lumen-rescue-returned');
+			} catch (e) {}
 			const result = await start();
 			if (result.state === 'error') return this.show(result);
 			setTimeout(() => this.refresh(), 1500);
@@ -52,6 +55,18 @@ return view.extend({
 		try {
 			const result = initial || await status();
 			this.show(result);
+			if (result && result.state === 'success' && result.target) {
+				// The worker removed the temporary menu override before reporting
+				// success. Reopen the complete page, including its rollback button.
+				// Limit this to once in case storage or menu restoration fails.
+				try {
+					if (sessionStorage.getItem('lumen-rescue-returned') !== result.target) {
+						sessionStorage.setItem('lumen-rescue-returned', result.target);
+						location.reload();
+						return;
+					}
+				} catch (e) { /* The user can reload manually. */ }
+			}
 			if (result && result.state === 'waiting' && result.target) {
 				let reloaded = false;
 				try {
